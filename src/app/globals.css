@@ -1,6 +1,13 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-military-green: #1a3c2b;
+  --color-military-green-light: #2d5a3d;
+  --color-military-gold: #c8a94a;
+  --color-military-gold-light: #e8c96a;
+  --color-dark-bg: #0f1f17;
+  --color-card-bg: #152a1e;
+}
 
 :root {
   --military-green: #1a3c2b;
@@ -18,40 +25,98 @@ body {
 }
 
 .phase-card {
-  @apply bg-card-bg border border-military-green rounded-lg p-4 transition-all duration-200;
+  background-color: var(--card-bg);
+  border: 1px solid var(--military-green);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  transition: all 200ms;
 }
 
 .phase-card:hover {
-  @apply border-military-gold;
+  border-color: var(--military-gold);
 }
 
 .btn-primary {
-  @apply bg-military-gold text-military-green font-bold py-2 px-4 rounded hover:bg-military-gold-light transition-colors;
+  background-color: var(--military-gold);
+  color: var(--military-green);
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: colors 150ms;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: var(--military-gold-light);
 }
 
 .btn-secondary {
-  @apply border border-military-gold text-military-gold py-2 px-4 rounded hover:bg-military-green transition-colors;
+  border: 1px solid var(--military-gold);
+  color: var(--military-gold);
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: colors 150ms;
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.btn-secondary:hover {
+  background-color: var(--military-green);
 }
 
 .input-field {
-  @apply bg-dark-bg border border-military-green rounded px-3 py-2 text-green-100 w-full
-         focus:outline-none focus:border-military-gold placeholder-green-700 text-sm;
+  background-color: var(--dark-bg);
+  border: 1px solid var(--military-green);
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  color: #dcfce7;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--military-gold);
+}
+
+.input-field::placeholder {
+  color: #166534;
 }
 
 .textarea-field {
-  @apply bg-dark-bg border border-military-green rounded px-3 py-2 text-green-100 w-full
-         focus:outline-none focus:border-military-gold placeholder-green-700 text-sm resize-none;
+  background-color: var(--dark-bg);
+  border: 1px solid var(--military-green);
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  color: #dcfce7;
+  width: 100%;
+  font-size: 0.875rem;
+  resize: none;
+}
+
+.textarea-field:focus {
+  outline: none;
+  border-color: var(--military-gold);
+}
+
+.textarea-field::placeholder {
+  color: #166534;
 }
 
 .section-title {
-  @apply text-military-gold font-bold text-sm uppercase tracking-widest mb-3;
+  color: var(--military-gold);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
 }
 
-.badge-verde { @apply bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full; }
-.badge-amarelo { @apply bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full; }
-.badge-vermelho { @apply bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full; }
-.badge-pending { @apply bg-gray-800 text-gray-400 text-xs px-2 py-1 rounded-full; }
-.badge-completed { @apply bg-green-900 text-green-400 text-xs px-2 py-1 rounded-full; }
+.badge-verde { background-color: #14532d; color: #86efac; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; }
+.badge-amarelo { background-color: #713f12; color: #fde047; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; }
+.badge-vermelho { background-color: #7f1d1d; color: #fca5a5; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; }
+.badge-pending { background-color: #1f2937; color: #9ca3af; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; }
+.badge-completed { background-color: #14532d; color: #4ade80; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; }
 
 @keyframes pulse-gold {
   0%, 100% { opacity: 1; }
