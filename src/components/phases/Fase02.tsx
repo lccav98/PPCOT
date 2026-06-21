@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { usePPCOT } from '@/lib/store'
-import { CheckCircle, Plus, Trash2, MapPin, Brain, Loader, Printer } from 'lucide-react'
+import { CheckCircle, Plus, Trash2, MapPin, Brain, Loader, Printer, Upload } from 'lucide-react'
 import TacticalMap from '@/components/shared/TacticalMap'
 
 type Tab = 'inimigo' | 'terreno' | 'meteo' | 'meios' | 'tempo' | 'civis' | 'fff' | 'estimativas'
@@ -11,9 +11,83 @@ export default function Fase02() {
   const f = state.fase02
   const [tab, setTab] = useState<Tab>('inimigo')
   const [loadingEstimativas, setLoadingEstimativas] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE02', payload })
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setError('')
+    
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/api/parse', {
+        method: 'POST',
+        body: formData,
+      })
+      const json = await res.json()
+      if (json.success) {
+        upd({ rawIntelligence: json.text })
+      } else {
+        setError(json.error || 'Erro ao importar documento.')
+      }
+    } catch {
+      setError('Falha de conexão ao enviar o documento.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const analyzeIntelligence = async () => {
+    if (!f.rawIntelligence?.trim()) { setError('Cole o texto do anexo de inteligência antes de analisar.'); return }
+    setLoading(true); setError('')
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'situation', content: f.rawIntelligence }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        upd({
+          dicovap: {
+            dispositivo: json.data.dicovap?.dispositivo || '',
+            composicao: json.data.dicovap?.composicao || '',
+            valor: json.data.dicovap?.valor || '',
+            atividades: json.data.dicovap?.atividades || '',
+            peculiaridades: json.data.dicovap?.peculiaridades || '',
+          },
+          ocoav: {
+            observacao: json.data.ocoav?.observacao || '',
+            cobertas: json.data.ocoav?.cobertas || '',
+            obstaculos: json.data.ocoav?.obstaculos || '',
+            acidentesCapitais: json.data.ocoav?.acidentesCapitais || '',
+            viasDeAcesso: json.data.ocoav?.viasDeAcesso || '',
+          },
+          visibilidade: json.data.visibilidade || '',
+          vento: json.data.vento || '',
+          precipitacao: json.data.precipitacao || '',
+          temperatura: json.data.temperatura || '',
+          areas: json.data.areas || '',
+          estruturas: json.data.estruturas || '',
+          capacidades: json.data.capacidades || '',
+          organizacoes: json.data.organizacoes || '',
+          pessoas: json.data.pessoas || '',
+          eventos: json.data.eventos || '',
+          status: 'in_progress'
+        })
+      } else { setError(json.error || 'Erro na análise. Verifique a chave de API.') }
+    } catch { setError('Falha na conexão com a IA.') }
+    setLoading(false)
+  }
   const updDicovap = (field: keyof typeof f.dicovap, val: string) =>
     upd({ dicovap: { ...f.dicovap, [field]: val } })
   const updOcoav = (field: keyof typeof f.ocoav, val: string) =>
@@ -49,6 +123,7 @@ export default function Fase02() {
             precipitacao: f.precipitacao,
             temperatura: f.temperatura,
             means: f.meiosDisponiveis,
+            subordinateEchelons: state.fase01.subordinateEchelons || [],
             areas: f.areas,
             estruturas: f.estruturas,
             capacidades: f.capacidades,
@@ -110,6 +185,37 @@ export default function Fase02() {
         onUpdateInfluencia={val => upd({ influenciaOponente: val })}
         ocoav={f.ocoav}
       />
+
+      {/* Documento do Anexo A - Inteligência */}
+      <div className="bg-card-bg rounded-lg p-4 border border-military-green">
+        <label className="section-title">Anexo A — Inteligência (Documento Recebido)</label>
+        <textarea
+          className="textarea-field h-32"
+          placeholder="Cole aqui o texto completo do Anexo A (Inteligência), relatório de situação (SITREP) ou ordem de inteligência..."
+          value={f.rawIntelligence || ''}
+          onChange={e => upd({ rawIntelligence: e.target.value })}
+        />
+        <div className="flex flex-wrap items-center gap-3 mt-3">
+          <button onClick={analyzeIntelligence} disabled={loading} className="btn-primary flex items-center gap-2 cursor-pointer">
+            {loading ? <Loader size={16} className="animate-spin" /> : <Brain size={16} />}
+            {loading ? 'Analisando...' : 'Analisar Anexo com IA'}
+          </button>
+
+          <label className="btn-secondary text-xs flex items-center gap-1.5 cursor-pointer">
+            {uploading ? <Loader size={13} className="animate-spin" /> : <Upload size={13} />}
+            {uploading ? 'Processando Documento...' : 'Importar PDF / DOCX'}
+            <input
+              type="file"
+              accept=".pdf,.docx"
+              onChange={handleFileUpload}
+              className="hidden"
+              disabled={uploading || loading}
+            />
+          </label>
+
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+        </div>
+      </div>
 
       {/* Tabs MITeMeTeC */}
       <div className="bg-card-bg rounded-lg border border-military-green overflow-hidden">
@@ -176,7 +282,33 @@ export default function Fase02() {
           )}
 
           {tab === 'meios' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {state.fase01.subordinateEchelons && state.fase01.subordinateEchelons.length > 0 && (
+                <div className="border border-military-green/50 bg-black/20 rounded p-3 space-y-2">
+                  <label className="text-military-gold text-xs font-bold block uppercase tracking-wider">
+                    Escalões Subordinados (Importados da Análise da Missão)
+                  </label>
+                  <ul className="list-disc list-inside text-xs text-green-400 space-y-1">
+                    {state.fase01.subordinateEchelons.map((sub, idx) => (
+                      <li key={idx}>
+                        <span className="font-semibold text-white">{sub}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const listStr = state.fase01.subordinateEchelons.map(s => `- ${s}: [Efetivo/Equipamento/Apoio]`).join('\n')
+                      const currentVal = f.meiosDisponiveis ? `${f.meiosDisponiveis}\n\n` : ''
+                      upd({ meiosDisponiveis: `${currentVal}Composição Detalhada dos Meios por Subordinado:\n${listStr}` })
+                    }}
+                    className="mt-2 text-[10px] text-military-gold border border-military-gold/30 hover:border-military-gold hover:bg-military-green/20 px-2 py-1 rounded transition-colors cursor-pointer"
+                  >
+                    Importar Estrutura de Meios Detalhada
+                  </button>
+                </div>
+              )}
+
               <TextArea label="Meios Disponíveis" val={f.meiosDisponiveis} onChg={v => upd({ meiosDisponiveis: v })} ph="Unidades, efetivos, armamentos, viaturas, aeronaves, apoio logístico disponíveis..." />
               <div>
                 <label className="text-green-500 text-xs mb-1 block">Poder Relativo de Combate (PRC)</label>

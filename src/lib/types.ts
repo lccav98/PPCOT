@@ -1,8 +1,24 @@
 export type PhaseStatus = 'pending' | 'in_progress' | 'completed'
 
+export interface UnitMissionAnalysis {
+  who: string
+  what: string
+  when: string
+  where: string
+  why: string
+  assignedTasks: string[]
+  impliedTasks: string[]
+  restrictions: string[]
+  newMissionStatement: string
+  initialIntent: string
+}
+
 export interface MissionAnalysis {
   rawOrder: string; who: string; what: string; when: string; where: string; why: string
   assignedTasks: string[]; impliedTasks: string[]; restrictions: string[]
+  subordinateEchelons: string[]
+  selectedUnit: string
+  unitAnalyses: Record<string, UnitMissionAnalysis>
   newMissionStatement: string; initialIntent: string; eeiList: string[]
   timePlan: string; oa1: string; status: PhaseStatus
 }
@@ -23,6 +39,7 @@ export interface EstimativasData {
 }
 
 export interface SituacaoAnalysis {
+  rawIntelligence: string;
   dicovap: DICOVAPFactor; ocoav: OCOAVFactor
   visibilidade: string; vento: string; precipitacao: string; temperatura: string
   meiosDisponiveis: string; prc: string; tempoPlj: string; tempoExec: string
@@ -50,8 +67,20 @@ export interface SyncGridCell {
   texto: string
 }
 
+export interface UnitCOAAnalysis {
+  psbIni: PsbIni[]
+  linhasAcao: LinhaDeAcao[]
+  syncGrid: SyncGridCell[]
+}
+
 export interface LinhasAcaoData {
-  psbIni: PsbIni[]; linhasAcao: LinhaDeAcao[]; matrizSincronizacao: string; syncGrid: SyncGridCell[]; status: PhaseStatus
+  psbIni: PsbIni[]
+  linhasAcao: LinhaDeAcao[]
+  matrizSincronizacao: string
+  syncGrid: SyncGridCell[]
+  selectedUnit: string
+  unitAnalyses: Record<string, UnitCOAAnalysis>
+  status: PhaseStatus
 }
 
 export interface CriterioAvaliacao { id: string; nome: string; peso: number }
@@ -59,6 +88,7 @@ export interface CriterioAvaliacao { id: string; nome: string; peso: number }
 export interface ComparacaoData {
   criterios: CriterioAvaliacao[]
   pontuacoes: { laId: string; criterioId: string; pontos: number }[]
+  justificativas?: Record<string, string>
   apaFinalLA: Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }>
   laRecomendada: string; justificativa: string; status: PhaseStatus
 }

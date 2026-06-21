@@ -27,24 +27,80 @@ export default function Fase03() {
   const [loadingSync, setLoadingSync] = useState(false)
   const [activeLA, setActiveLA] = useState(0)
 
+  const selectedUnit = f.selectedUnit || 'Principal'
+
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE03', payload })
 
+  // Getters
+  const getPsbIni = (): PsbIni[] => {
+    if (selectedUnit === 'Principal') return f.psbIni || []
+    return f.unitAnalyses?.[selectedUnit]?.psbIni || []
+  }
+
+  const getLinhasAcao = (): LinhaDeAcao[] => {
+    if (selectedUnit === 'Principal') return f.linhasAcao || []
+    return f.unitAnalyses?.[selectedUnit]?.linhasAcao || []
+  }
+
+  const getSyncGrid = (): SyncGridCell[] => {
+    if (selectedUnit === 'Principal') return f.syncGrid || []
+    return f.unitAnalyses?.[selectedUnit]?.syncGrid || []
+  }
+
+  // Setters
+  const setPsbIni = (psbIni: PsbIni[]) => {
+    if (selectedUnit === 'Principal') {
+      upd({ psbIni })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { psbIni: [], linhasAcao: [], syncGrid: [] }
+      analyses[selectedUnit] = { ...current, psbIni }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setLinhasAcao = (linhasAcao: LinhaDeAcao[]) => {
+    if (selectedUnit === 'Principal') {
+      upd({ linhasAcao })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { psbIni: [], linhasAcao: [], syncGrid: [] }
+      analyses[selectedUnit] = { ...current, linhasAcao }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setSyncGrid = (syncGrid: SyncGridCell[]) => {
+    if (selectedUnit === 'Principal') {
+      upd({ syncGrid })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { psbIni: [], linhasAcao: [], syncGrid: [] }
+      analyses[selectedUnit] = { ...current, syncGrid }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
   const addLA = () => {
+    const currentLAs = getLinhasAcao()
     const newLA: LinhaDeAcao = {
-      id: Date.now().toString(), numero: f.linhasAcao.length + 1,
+      id: Date.now().toString(), numero: currentLAs.length + 1,
       oQue: '', como: '', onde: '', paraQue: '', quando: '', faseamento: '', sumario: '',
       apaAdequabilidade: null, apaPraticabilidade: null, apaAceitabilidade: null, esquemaManobra: ''
     }
-    upd({ linhasAcao: [...f.linhasAcao, newLA] })
-    setActiveLA(f.linhasAcao.length)
+    setLinhasAcao([...currentLAs, newLA])
+    setActiveLA(currentLAs.length)
   }
 
-  const updLA = (id: string, field: keyof LinhaDeAcao, val: any) =>
-    upd({ linhasAcao: f.linhasAcao.map(la => la.id === id ? { ...la, [field]: val } : la) })
+  const updLA = (id: string, field: keyof LinhaDeAcao, val: any) => {
+    const currentLAs = getLinhasAcao()
+    setLinhasAcao(currentLAs.map(la => la.id === id ? { ...la, [field]: val } : la))
+  }
 
   const addPsb = () => {
+    const currentPsbs = getPsbIni()
     const newPsb: PsbIni = { id: Date.now().toString(), descricao: '', probabilidade: 'media', impacto: '' }
-    upd({ psbIni: [...f.psbIni, newPsb] })
+    setPsbIni([...currentPsbs, newPsb])
   }
 
   const suggestLA = async () => {
@@ -55,24 +111,27 @@ export default function Fase03() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'la',
+          targetUnit: selectedUnit,
           content: {
             mission: state.fase01.newMissionStatement || state.fase01.what,
             situation: `Inimigo: ${state.fase02.dicovap.dispositivo}. Terreno: ${state.fase02.ocoav.viasDeAcesso}`,
-            means: state.fase02.meiosDisponiveis
+            means: state.fase02.meiosDisponiveis,
+            subordinateEchelons: state.fase01.subordinateEchelons || []
           }
         }),
       })
       const json = await res.json()
+      const currentLAs = getLinhasAcao()
       if (json.success && json.data.linhasAcao) {
         const newLAs: LinhaDeAcao[] = json.data.linhasAcao.map((la: any, i: number) => ({
-          id: Date.now().toString() + i, numero: f.linhasAcao.length + i + 1,
+          id: Date.now().toString() + i, numero: currentLAs.length + i + 1,
           oQue: la.oQue || '', como: la.como || '', onde: la.onde || '',
           paraQue: la.paraQue || '', quando: la.quando || '',
           faseamento: la.faseamento || '', sumario: la.sumario || '',
           apaAdequabilidade: null, apaPraticabilidade: null, apaAceitabilidade: null, esquemaManobra: ''
         }))
-        upd({ linhasAcao: [...f.linhasAcao, ...newLAs] })
-        setActiveLA(f.linhasAcao.length)
+        setLinhasAcao([...currentLAs, ...newLAs])
+        setActiveLA(currentLAs.length)
       } else {
         alert(json.error || 'Erro ao sugerir Linhas de Ação. Verifique a chave de API.')
       }
@@ -83,7 +142,8 @@ export default function Fase03() {
   }
 
   const syncWithIA = async () => {
-    const la = f.linhasAcao[activeLA]
+    const currentLAs = getLinhasAcao()
+    const la = currentLAs[activeLA]
     if (!la) { alert('Formule e selecione uma Linha de Ação ativa para sincronizar.'); return }
     setLoadingSync(true)
     try {
@@ -92,12 +152,13 @@ export default function Fase03() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'sync',
+          targetUnit: selectedUnit,
           content: { la }
         }),
       })
       const json = await res.json()
       if (json.success && json.data.syncGrid) {
-        upd({ syncGrid: json.data.syncGrid })
+        setSyncGrid(json.data.syncGrid)
       } else {
         alert(json.error || 'Erro ao sincronizar. Verifique a chave de API.')
       }
@@ -108,9 +169,9 @@ export default function Fase03() {
   }
 
   const updateCell = (fase: string, funcao: string, texto: string) => {
-    const grid = f.syncGrid || []
+    const grid = getSyncGrid()
     const filtered = grid.filter(c => !(c.fase === fase && c.funcao === funcao))
-    upd({ syncGrid: [...filtered, { fase, funcao, texto }] })
+    setSyncGrid([...filtered, { fase, funcao, texto }])
   }
 
   const APAButton = ({ val, onChange, label }: { val: boolean | null; onChange: (v: boolean) => void; label: string }) => (
@@ -121,6 +182,9 @@ export default function Fase03() {
     </div>
   )
 
+  const currentLAs = getLinhasAcao()
+  const currentPsbs = getPsbIni()
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -130,32 +194,61 @@ export default function Fase03() {
         </div>
       </div>
 
+      {/* Seletor de Unidade / Escalão sob Planejamento */}
+      <div className="bg-card-bg rounded-lg p-4 border border-military-gold glow-gold flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <label className="section-title mb-1">Unidade sob Planejamento (Escalão Ativo) — Fase 03</label>
+          <p className="text-green-500 text-xs">Selecione para qual escalão/unidade você está desenvolvendo as Linhas de Ação e a Sincronização.</p>
+          {(state.fase01.subordinateEchelons || []).filter(sub => sub.trim() !== '').length === 0 && (
+            <p className="text-yellow-500 text-[10px] mt-1">⚠️ Adicione unidades na seção &quot;Escalões Subordinados&quot; da Fase 01 para habilitá-las neste seletor.</p>
+          )}
+        </div>
+        <div className="w-full md:w-72">
+          <select
+            value={selectedUnit}
+            onChange={e => {
+              upd({ selectedUnit: e.target.value })
+              setActiveLA(0)
+            }}
+            className="input-field text-military-gold border-military-gold bg-dark-bg font-bold cursor-pointer"
+          >
+            <option value="Principal">Principal (Comando Geral / Geral da Missão)</option>
+            {(state.fase01.subordinateEchelons || []).filter(sub => sub.trim() !== '').map((sub, idx) => (
+              <option key={idx} value={sub}>{sub}</option>
+            ))}
+            {selectedUnit !== 'Principal' && !(state.fase01.subordinateEchelons || []).includes(selectedUnit) && (
+              <option value={selectedUnit}>{selectedUnit}</option>
+            )}
+          </select>
+        </div>
+      </div>
+
       {/* Possibilidades do Inimigo */}
       <div className="bg-card-bg rounded-lg p-4 border border-military-green">
         <div className="flex justify-between items-center mb-3">
-          <label className="section-title">Possibilidades do Inimigo (Psb Ini)</label>
+          <label className="section-title">Possibilidades do Inimigo (Psb Ini) — {selectedUnit}</label>
           <button onClick={addPsb} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer"><Plus size={12}/> Adicionar</button>
         </div>
-        {f.psbIni.length === 0 && <p className="text-green-700 text-xs italic">Nenhuma possibilidade cadastrada.</p>}
+        {currentPsbs.length === 0 && <p className="text-green-700 text-xs italic">Nenhuma possibilidade cadastrada.</p>}
         <div className="space-y-3">
-          {f.psbIni.map((psb, i) => (
+          {currentPsbs.map((psb, i) => (
             <div key={psb.id} className="border border-green-900 rounded p-3 space-y-2">
               <div className="flex gap-2 items-center">
                 <span className="text-military-gold text-xs font-bold w-6">#{i+1}</span>
                 <input className="input-field text-xs flex-1" value={psb.descricao}
-                  onChange={e => upd({ psbIni: f.psbIni.map(p => p.id === psb.id ? { ...p, descricao: e.target.value } : p) })}
+                  onChange={e => setPsbIni(currentPsbs.map(p => p.id === psb.id ? { ...p, descricao: e.target.value } : p))}
                   placeholder="Descrição da possibilidade do inimigo..." />
                 <select className="input-field w-28 text-xs"
                   value={psb.probabilidade}
-                  onChange={e => upd({ psbIni: f.psbIni.map(p => p.id === psb.id ? { ...p, probabilidade: e.target.value as any } : p) })}>
+                  onChange={e => setPsbIni(currentPsbs.map(p => p.id === psb.id ? { ...p, probabilidade: e.target.value as any } : p))}>
                   <option value="alta">Alta</option>
                   <option value="media">Média</option>
                   <option value="baixa">Baixa</option>
                 </select>
-                <button onClick={() => upd({ psbIni: f.psbIni.filter(p => p.id !== psb.id) })} className="text-red-600 cursor-pointer"><Trash2 size={14}/></button>
+                <button onClick={() => setPsbIni(currentPsbs.filter(p => p.id !== psb.id))} className="text-red-600 cursor-pointer"><Trash2 size={14}/></button>
               </div>
               <input className="input-field text-xs" value={psb.impacto}
-                onChange={e => upd({ psbIni: f.psbIni.map(p => p.id === psb.id ? { ...p, impacto: e.target.value } : p) })}
+                onChange={e => setPsbIni(currentPsbs.map(p => p.id === psb.id ? { ...p, impacto: e.target.value } : p))}
                 placeholder="Impacto na missão..." />
             </div>
           ))}
@@ -165,7 +258,7 @@ export default function Fase03() {
       {/* Linhas de Ação */}
       <div className="bg-card-bg rounded-lg p-4 border border-military-green">
         <div className="flex justify-between items-center mb-3">
-          <label className="section-title">Linhas de Ação (L Aç)</label>
+          <label className="section-title">Linhas de Ação (L Aç) — {selectedUnit}</label>
           <div className="flex gap-2">
             <button onClick={suggestLA} disabled={loading} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer">
               {loading ? <Loader size={12} className="animate-spin"/> : <Brain size={12}/>}
@@ -175,12 +268,12 @@ export default function Fase03() {
           </div>
         </div>
 
-        {f.linhasAcao.length === 0 && <p className="text-green-700 text-xs italic text-center py-4">Nenhuma L Aç formulada. Use "Sugerir com IA" ou "Nova L Aç".</p>}
+        {currentLAs.length === 0 && <p className="text-green-700 text-xs italic text-center py-4">Nenhuma L Aç formulada. Use "Sugerir com IA" ou "Nova L Aç".</p>}
 
-        {f.linhasAcao.length > 0 && (
+        {currentLAs.length > 0 && (
           <>
             <div className="flex gap-2 mb-4 flex-wrap">
-              {f.linhasAcao.map((la, i) => (
+              {currentLAs.map((la, i) => (
                 <button key={la.id} onClick={() => setActiveLA(i)}
                   className={`px-3 py-1 text-xs rounded-full border cursor-pointer ${activeLA === i ? 'bg-military-gold text-military-green font-bold border-military-gold' : 'border-green-700 text-green-400 hover:border-military-gold'}`}>
                   L Aç {la.numero}
@@ -188,8 +281,8 @@ export default function Fase03() {
               ))}
             </div>
 
-            {f.linhasAcao[activeLA] && (() => {
-              const la = f.linhasAcao[activeLA]
+            {currentLAs[activeLA] && (() => {
+              const la = currentLAs[activeLA]
               return (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
@@ -227,7 +320,7 @@ export default function Fase03() {
                     ) : null}
                   </div>
                   <div className="flex justify-end">
-                    <button onClick={() => upd({ linhasAcao: f.linhasAcao.filter(l => l.id !== la.id) })} className="text-red-600 hover:text-red-400 text-xs flex items-center gap-1 cursor-pointer">
+                    <button onClick={() => setLinhasAcao(currentLAs.filter(l => l.id !== la.id))} className="text-red-600 hover:text-red-400 text-xs flex items-center gap-1 cursor-pointer">
                       <Trash2 size={12}/> Remover esta L Aç
                     </button>
                   </div>
@@ -242,12 +335,12 @@ export default function Fase03() {
       <div className="bg-card-bg rounded-lg p-4 border border-military-green space-y-4 overflow-x-auto">
         <div className="flex justify-between items-center">
           <div>
-            <label className="section-title block mb-0">Matriz de Sincronização Dinâmica (Anexo B)</label>
+            <label className="section-title block mb-0">Matriz de Sincronização Dinâmica (Anexo B) — {selectedUnit}</label>
             <p className="text-green-600 text-[10px]">Alinhamento de funções de combate ao longo das fases da operação</p>
           </div>
           <button
             onClick={syncWithIA}
-            disabled={loadingSync || f.linhasAcao.length === 0}
+            disabled={loadingSync || currentLAs.length === 0}
             className="btn-secondary text-xs flex items-center gap-1 cursor-pointer"
           >
             {loadingSync ? <Loader size={12} className="animate-spin" /> : <Brain size={12} />}
@@ -269,7 +362,8 @@ export default function Fase03() {
               <tr key={row} className="hover:bg-military-green/5">
                 <td className="border border-green-950 p-2 font-bold text-green-400 bg-military-green/10">{row}</td>
                 {COLUMNS.map(col => {
-                  const cellValue = f.syncGrid?.find(c => c.fase === col && c.funcao === row)?.texto || ''
+                  const grid = getSyncGrid()
+                  const cellValue = grid.find(c => c.fase === col && c.funcao === row)?.texto || ''
                   return (
                     <td key={col} className="border border-green-950 p-1">
                       <textarea

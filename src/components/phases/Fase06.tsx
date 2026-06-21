@@ -28,6 +28,7 @@ export default function Fase06() {
             laAprovada: la ? `${la.oQue} / ${la.como} / ${la.faseamento}` : state.fase05.laEscolhida,
             intencao: state.fase05.intencaoAtualizada,
             meios: state.fase02.meiosDisponiveis,
+            subordinateEchelons: state.fase01.subordinateEchelons || []
           }
         }),
       })
@@ -45,12 +46,17 @@ export default function Fase06() {
 
   const autoFill = () => {
     const la = state.fase03.linhasAcao.find(l => l.id === state.fase05.laEscolhida)
+    const subordinateTasks = state.fase01.subordinateEchelons && state.fase01.subordinateEchelons.length > 0
+      ? state.fase01.subordinateEchelons.map(se => `- **${se}**: [Atribuir tarefa tática e propósito]`).join('\n\n')
+      : '[Definir tarefas dos elementos subordinados]'
+
     upd({
       missao: state.fase01.newMissionStatement || state.fase01.what,
       intencaoCmt: state.fase05.intencaoAtualizada || state.fase01.initialIntent,
       inimigo: `Dispositivo: ${state.fase02.dicovap.dispositivo}\nComposição: ${state.fase02.dicovap.composicao}\nValor: ${state.fase02.dicovap.valor}`,
       forcasAmigas: state.fase02.meiosDisponiveis,
       conceitoOperacao: la ? `Fase I: Preparação\n- Sincronização: ${state.fase03.syncGrid?.find(c => c.fase === 'Fase I: Preparação' && c.funcao === 'Manobra')?.texto || 'Ações iniciais.'}\n\nFase II: Movimento\n- Sincronização: ${state.fase03.syncGrid?.find(c => c.fase === 'Fase II: Movimento' && c.funcao === 'Manobra')?.texto || 'Deslocamento.'}\n\nFase III: Ação\n- Manobra Principal: ${la.oQue}\n- Detalhe Execução: ${la.como}` : '',
+      tarefasSubordinados: subordinateTasks,
       status: 'in_progress'
     })
   }

@@ -27,7 +27,8 @@ export default function Fase05() {
             mission: state.fase01.newMissionStatement || state.fase01.what,
             laEscolhida: selectedLA ? `L Aç ${selectedLA.numero} — ${selectedLA.sumario || selectedLA.oQue}` : f.laEscolhida,
             intencao: f.intencaoAtualizada || state.fase01.initialIntent,
-            modificacoes: f.modificacoes
+            modificacoes: f.modificacoes,
+            subordinateEchelons: state.fase01.subordinateEchelons || []
           }
         }),
       })

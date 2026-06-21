@@ -8,10 +8,14 @@ const initialState: PPCOTState = {
   fase01: {
     rawOrder: '', who: '', what: '', when: '', where: '', why: '',
     assignedTasks: [], impliedTasks: [], restrictions: [],
+    subordinateEchelons: [],
+    selectedUnit: 'Principal',
+    unitAnalyses: {},
     newMissionStatement: '', initialIntent: '', eeiList: [], timePlan: '', oa1: '',
     status: 'pending'
   },
   fase02: {
+    rawIntelligence: '',
     dicovap: { dispositivo: '', composicao: '', valor: '', atividades: '', peculiaridades: '' },
     ocoav: { observacao: '', cobertas: '', obstaculos: '', acidentesCapitais: '', viasDeAcesso: '' },
     visibilidade: '', vento: '', precipitacao: '', temperatura: '',
@@ -21,8 +25,8 @@ const initialState: PPCOTState = {
     estimativas: { s2: '', s3: '', s4: '', s5: '' },
     status: 'pending'
   },
-  fase03: { psbIni: [], linhasAcao: [], matrizSincronizacao: '', syncGrid: [], status: 'pending' },
-  fase04: { criterios: [], pontuacoes: [], apaFinalLA: {}, laRecomendada: '', justificativa: '', status: 'pending' },
+  fase03: { psbIni: [], linhasAcao: [], matrizSincronizacao: '', syncGrid: [], selectedUnit: 'Principal', unitAnalyses: {}, status: 'pending' },
+  fase04: { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '', status: 'pending' },
   fase05: { laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], oa4: '', status: 'pending' },
   fase06: {
     classificacao: 'RESERVADO', numero: '', referencias: '',

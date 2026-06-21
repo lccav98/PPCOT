@@ -1,6 +1,7 @@
 'use client'
+import React, { useState } from 'react'
 import { usePPCOT } from '@/lib/store'
-import { Plus, Trash2, CheckCircle, Star, Award, CheckSquare, Square } from 'lucide-react'
+import { Plus, Trash2, CheckCircle, Star, Award, Brain, Loader } from 'lucide-react'
 import { CriterioAvaliacao } from '@/lib/types'
 
 const DEFAULT_CRITERIOS: CriterioAvaliacao[] = [
@@ -16,6 +17,10 @@ export default function Fase04() {
   const { state, dispatch } = usePPCOT()
   const f = state.fase04
   const las = state.fase03.linhasAcao
+
+  const [loadingCompare, setLoadingCompare] = useState(false)
+  const [error, setError] = useState('')
+  const [selectedCell, setSelectedCell] = useState<{ laId: string; criterioId: string } | null>(null)
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE04', payload })
 
@@ -59,6 +64,63 @@ export default function Fase04() {
         }
       }
     })
+  }
+
+  const evaluateMatrixWithIA = async () => {
+    setLoadingCompare(true)
+    setError('')
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'compare',
+          content: {
+            linhasAcao: las.map(la => ({
+              id: la.id,
+              numero: la.numero,
+              oQue: la.oQue,
+              como: la.como,
+              onde: la.onde,
+              paraQue: la.paraQue,
+              quando: la.quando,
+              faseamento: la.faseamento,
+              sumario: la.sumario
+            })),
+            criterios: f.criterios.map(c => ({
+              id: c.id,
+              nome: c.nome,
+              peso: c.peso
+            }))
+          }
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.data.pontuacoes) {
+        const newPontuacoes: typeof f.pontuacoes = []
+        const newJustificativas: Record<string, string> = {}
+
+        json.data.pontuacoes.forEach((item: any) => {
+          newPontuacoes.push({
+            laId: item.laId,
+            criterioId: item.criterioId,
+            pontos: Number(item.pontos)
+          })
+          const cellKey = `${item.laId}_${item.criterioId}`
+          newJustificativas[cellKey] = item.justificativa || ''
+        })
+
+        upd({
+          pontuacoes: newPontuacoes,
+          justificativas: newJustificativas
+        })
+      } else {
+        setError(json.error || 'Erro ao avaliar com a IA. Verifique a chave de API.')
+      }
+    } catch {
+      setError('Falha na conexão com a IA para comparação.')
+    }
+    setLoadingCompare(false)
   }
 
   const ranking = [...las].sort((a, b) => getTotal(b.id) - getTotal(a.id))
@@ -109,8 +171,19 @@ export default function Fase04() {
           </div>
 
           {/* Matriz de Decisão */}
-          <div className="bg-card-bg rounded-lg p-4 border border-military-green overflow-x-auto">
-            <label className="section-title">Matriz de Decisão (Pontuação 0–5)</label>
+          <div className="bg-card-bg rounded-lg p-4 border border-military-green overflow-x-auto space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="section-title mb-0">Matriz de Decisão (Pontuação 0–5)</label>
+              <button
+                onClick={evaluateMatrixWithIA}
+                disabled={loadingCompare}
+                className="btn-secondary text-xs flex items-center gap-1 cursor-pointer"
+              >
+                {loadingCompare ? <Loader size={12} className="animate-spin" /> : <Brain size={12} />}
+                {loadingCompare ? 'Avaliando com IA...' : '✨ Avaliar Matriz com IA'}
+              </button>
+            </div>
+            {error && <p className="text-red-400 text-xs">{error}</p>}
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-green-800">
@@ -129,11 +202,24 @@ export default function Fase04() {
                     {las.map(la => {
                       const pts = getPontos(la.id, c.id)
                       const total = pts * c.peso
+                      const isSelected = selectedCell?.laId === la.id && selectedCell?.criterioId === c.id
                       return (
-                        <td key={la.id} className="text-center py-2 px-3">
+                        <td
+                          key={la.id}
+                          className={`text-center py-2 px-3 cursor-pointer transition-colors ${
+                            isSelected ? 'bg-military-green/40 border border-military-gold' : 'hover:bg-military-green/10'
+                          }`}
+                          onClick={() => setSelectedCell({ laId: la.id, criterioId: c.id })}
+                        >
                           <div className="flex flex-col items-center gap-1">
-                            <select className="bg-dark-bg border border-green-800 rounded px-1 py-0.5 text-green-200 w-14 text-center cursor-pointer"
-                              value={pts} onChange={e => setPontos(la.id, c.id, Number(e.target.value))}>
+                            <select
+                              className="bg-dark-bg border border-green-800 rounded px-1 py-0.5 text-green-200 w-14 text-center cursor-pointer"
+                              value={pts}
+                              onChange={e => {
+                                setPontos(la.id, c.id, Number(e.target.value))
+                                setSelectedCell({ laId: la.id, criterioId: c.id })
+                              }}
+                            >
                               {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
                             </select>
                             <span className="text-green-600 text-xs">={total}</span>
@@ -154,6 +240,54 @@ export default function Fase04() {
               </tbody>
             </table>
           </div>
+
+          {/* Painel de Justificativa da Célula */}
+          {selectedCell && (() => {
+            const la = las.find(l => l.id === selectedCell.laId)
+            const crit = f.criterios.find(c => c.id === selectedCell.criterioId)
+            if (!la || !crit) return null
+
+            const cellKey = `${selectedCell.laId}_${selectedCell.criterioId}`
+            const justificationText = f.justificativas?.[cellKey] || ''
+
+            const setJustificationText = (txt: string) => {
+              const prev = f.justificativas || {}
+              upd({ justificativas: { ...prev, [cellKey]: txt } })
+            }
+
+            return (
+              <div className="bg-card-bg border border-military-gold rounded-lg p-4 animate-fade-in space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-military-gold font-bold text-xs uppercase tracking-wider">
+                    Fundamentação da Nota — L Aç {la.numero} vs. {crit.nome}
+                  </h4>
+                  <button
+                    onClick={() => setSelectedCell(null)}
+                    className="text-green-500 hover:text-green-400 text-xs cursor-pointer"
+                  >
+                    Fechar Painel
+                  </button>
+                </div>
+                <div className="text-xs text-green-400 space-y-2">
+                  <p>
+                    <span className="font-semibold text-white">Linha de Ação {la.numero}:</span> {la.sumario || la.oQue}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">Critério:</span> {crit.nome} (Peso: {crit.peso})
+                  </p>
+                </div>
+                <div>
+                  <label className="text-green-500 text-xs mb-1 block">Justificativa Tática e Objetiva (Para apoiar a tomada de decisão)</label>
+                  <textarea
+                    className="textarea-field h-20 text-xs font-mono"
+                    value={justificationText}
+                    onChange={e => setJustificationText(e.target.value)}
+                    placeholder="Escreva a justificativa tática para a nota desta célula, justificando por que esta linha de ação obteve a pontuação correspondente..."
+                  />
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Prova Final de APA */}
           <div className="bg-card-bg rounded-lg p-4 border border-military-green space-y-3">
@@ -211,7 +345,7 @@ export default function Fase04() {
                   <div key={la.id} className={`flex items-center gap-3 p-3 rounded border transition-all ${isRec ? 'border-military-gold bg-military-green/30' : 'border-green-900'}`}>
                     <span className={`font-bold text-sm w-6 ${i === 0 ? 'text-military-gold' : 'text-green-600'}`}>{i + 1}º</span>
                     <span className="text-green-200 flex-1 text-sm">L Aç {la.numero} — {la.sumario.substring(0, 70) || la.oQue.substring(0, 70) || 'Sem sumário'}</span>
-                    <div className="w-40 bg-green-950 rounded-full h-3.5 relative overflow-hidden border border-green-900 flex-shrink-0 hidden sm:block">
+                    <div className="w-40 bg-green-950 rounded-full h-3.5 relative overflow-hidden border border-green-950 flex-shrink-0 hidden sm:block">
                       <div className="bg-gradient-to-r from-military-green to-military-gold h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
                       <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white">{Math.round(pct)}%</span>
                     </div>
