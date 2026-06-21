@@ -32,8 +32,14 @@ export default function Fase06() {
         }),
       })
       const json = await res.json()
-      if (json.success) upd({ ...json.data, status: 'in_progress' })
-    } catch { }
+      if (json.success) {
+        upd({ ...json.data, status: 'in_progress' })
+      } else {
+        alert(json.error || 'Erro ao gerar a Ordem de Operações. Verifique a chave de API.')
+      }
+    } catch { 
+      alert('Falha na conexão com a IA.')
+    }
     setLoading(false)
   }
 

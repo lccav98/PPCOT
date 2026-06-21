@@ -69,7 +69,7 @@ export default function Fase02() {
           }
         })
       } else {
-        setError('Erro ao gerar estimativas. Verifique a chave de API.')
+        setError(json.error || 'Erro ao gerar estimativas. Verifique a chave de API.')
       }
     } catch {
       setError('Falha de conexão com a IA para estimativas.')

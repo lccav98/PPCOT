@@ -73,8 +73,12 @@ export default function Fase03() {
         }))
         upd({ linhasAcao: [...f.linhasAcao, ...newLAs] })
         setActiveLA(f.linhasAcao.length)
+      } else {
+        alert(json.error || 'Erro ao sugerir Linhas de Ação. Verifique a chave de API.')
       }
-    } catch { }
+    } catch { 
+      alert('Falha na conexão com a IA.')
+    }
     setLoading(false)
   }
 
@@ -95,7 +99,7 @@ export default function Fase03() {
       if (json.success && json.data.syncGrid) {
         upd({ syncGrid: json.data.syncGrid })
       } else {
-        alert('Erro ao sincronizar. Verifique a chave de API.')
+        alert(json.error || 'Erro ao sincronizar. Verifique a chave de API.')
       }
     } catch {
       alert('Falha na conexão com a IA para sincronização.')

@@ -35,7 +35,7 @@ export default function Fase05() {
       if (json.success) {
         upd({ oa4: json.data.oa4 })
       } else {
-        alert('Erro ao gerar a OA-4. Verifique a chave de API.')
+        alert(json.error || 'Erro ao gerar a OA-4. Verifique a chave de API.')
       }
     } catch {
       alert('Falha na conexão com a IA para OA-4.')

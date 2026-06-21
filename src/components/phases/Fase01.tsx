@@ -26,7 +26,7 @@ export default function Fase01() {
       const json = await res.json()
       if (json.success) {
         upd({ ...json.data, status: 'in_progress' })
-      } else { setError('Erro na análise. Verifique a chave de API.') }
+      } else { setError(json.error || 'Erro na análise. Verifique a chave de API.') }
     } catch { setError('Falha na conexão com a IA.') }
     setLoading(false)
   }
@@ -52,7 +52,7 @@ export default function Fase01() {
       const json = await res.json()
       if (json.success) {
         upd({ oa1: json.data.oa1 })
-      } else { setError('Erro ao gerar a OA-1. Verifique a chave de API.') }
+      } else { setError(json.error || 'Erro ao gerar a OA-1. Verifique a chave de API.') }
     } catch { setError('Falha na conexão com a IA para OA-1.') }
     setLoadingOA1(false)
   }
