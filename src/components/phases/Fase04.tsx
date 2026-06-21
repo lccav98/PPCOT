@@ -16,7 +16,7 @@ const DEFAULT_CRITERIOS: CriterioAvaliacao[] = [
 export default function Fase04() {
   const { state, dispatch } = usePPCOT()
   const f = state.fase04
-  const las = state.fase03.linhasAcao
+  const selectedUnit = state.selectedUnit || 'Principal'
 
   const [loadingCompare, setLoadingCompare] = useState(false)
   const [error, setError] = useState('')
@@ -24,44 +24,151 @@ export default function Fase04() {
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE04', payload })
 
+  const las = selectedUnit === 'Principal'
+    ? state.fase03.linhasAcao
+    : state.fase03.unitAnalyses?.[selectedUnit]?.linhasAcao || []
+
+  // Getters
+  const getCriterios = (): CriterioAvaliacao[] => {
+    if (selectedUnit === 'Principal') return f.criterios || []
+    return f.unitAnalyses?.[selectedUnit]?.criterios || []
+  }
+
+  const getPontuacoes = (): typeof f.pontuacoes => {
+    if (selectedUnit === 'Principal') return f.pontuacoes || []
+    return f.unitAnalyses?.[selectedUnit]?.pontuacoes || []
+  }
+
+  const getJustificativas = (): Record<string, string> => {
+    if (selectedUnit === 'Principal') return f.justificativas || {}
+    return f.unitAnalyses?.[selectedUnit]?.justificativas || {}
+  }
+
+  const getAPAFinalLA = (): Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }> => {
+    if (selectedUnit === 'Principal') return f.apaFinalLA || {}
+    return f.unitAnalyses?.[selectedUnit]?.apaFinalLA || {}
+  }
+
+  const getLaRecomendada = (): string => {
+    if (selectedUnit === 'Principal') return f.laRecomendada || ''
+    return f.unitAnalyses?.[selectedUnit]?.laRecomendada || ''
+  }
+
+  const getJustificativaText = (): string => {
+    if (selectedUnit === 'Principal') return f.justificativa || ''
+    return f.unitAnalyses?.[selectedUnit]?.justificativa || ''
+  }
+
+  // Setters
+  const setCriterios = (criterios: CriterioAvaliacao[]) => {
+    if (selectedUnit === 'Principal') {
+      upd({ criterios })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '' }
+      analyses[selectedUnit] = { ...current, criterios }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setPontuacoes = (pontuacoes: typeof f.pontuacoes) => {
+    if (selectedUnit === 'Principal') {
+      upd({ pontuacoes })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '' }
+      analyses[selectedUnit] = { ...current, pontuacoes }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setJustificativas = (justificativas: Record<string, string>) => {
+    if (selectedUnit === 'Principal') {
+      upd({ justificativas })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '' }
+      analyses[selectedUnit] = { ...current, justificativas }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setAPAFinalLA = (apaFinalLA: Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }>) => {
+    if (selectedUnit === 'Principal') {
+      upd({ apaFinalLA })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '' }
+      analyses[selectedUnit] = { ...current, apaFinalLA }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setLaRecomendada = (laRecomendada: string) => {
+    if (selectedUnit === 'Principal') {
+      upd({ laRecomendada })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '' }
+      analyses[selectedUnit] = { ...current, laRecomendada }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setJustificativaText = (justificativa: string) => {
+    if (selectedUnit === 'Principal') {
+      upd({ justificativa })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '' }
+      analyses[selectedUnit] = { ...current, justificativa }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const criterios = getCriterios()
+  const pontuacoes = getPontuacoes()
+  const justificativas = getJustificativas()
+  const apaFinalLA = getAPAFinalLA()
+  const laRecomendada = getLaRecomendada()
+  const justificativa = getJustificativaText()
+
   const initCriterios = () => {
-    if (f.criterios.length === 0) upd({ criterios: DEFAULT_CRITERIOS })
+    if (criterios.length === 0) setCriterios(DEFAULT_CRITERIOS)
   }
 
   const addCriterio = () => {
     const novo: CriterioAvaliacao = { id: Date.now().toString(), nome: '', peso: 1 }
-    upd({ criterios: [...f.criterios, novo] })
+    setCriterios([...criterios, novo])
   }
 
   const updCriterio = (id: string, field: keyof CriterioAvaliacao, val: any) =>
-    upd({ criterios: f.criterios.map(c => c.id === id ? { ...c, [field]: val } : c) })
+    setCriterios(criterios.map(c => c.id === id ? { ...c, [field]: val } : c))
 
   const getPontos = (laId: string, criterioId: string): number => {
-    const p = f.pontuacoes.find(p => p.laId === laId && p.criterioId === criterioId)
+    const p = pontuacoes.find(p => p.laId === laId && p.criterioId === criterioId)
     return p?.pontos ?? 0
   }
 
   const setPontos = (laId: string, criterioId: string, pontos: number) => {
-    const existing = f.pontuacoes.filter(p => !(p.laId === laId && p.criterioId === criterioId))
-    upd({ pontuacoes: [...existing, { laId, criterioId, pontos }] })
+    const existing = pontuacoes.filter(p => !(p.laId === laId && p.criterioId === criterioId))
+    setPontuacoes([...existing, { laId, criterioId, pontos }])
   }
 
   const getTotal = (laId: string): number =>
-    f.criterios.reduce((sum, c) => sum + getPontos(laId, c.id) * c.peso, 0)
+    criterios.reduce((sum, c) => sum + getPontos(laId, c.id) * c.peso, 0)
 
   const getMaxTotal = (): number =>
-    f.criterios.reduce((sum, c) => sum + 5 * c.peso, 0)
+    criterios.reduce((sum, c) => sum + 5 * c.peso, 0)
 
   const setAPAFinal = (laId: string, criteria: 'adequabilidade' | 'praticabilidade' | 'aceitabilidade', val: boolean) => {
-    const existing = f.apaFinalLA || {}
+    const existing = apaFinalLA
     const laAPA = existing[laId] || { adequabilidade: false, praticabilidade: false, aceitabilidade: false }
-    upd({
-      apaFinalLA: {
-        ...existing,
-        [laId]: {
-          ...laAPA,
-          [criteria]: val
-        }
+    setAPAFinalLA({
+      ...existing,
+      [laId]: {
+        ...laAPA,
+        [criteria]: val
       }
     })
   }
@@ -75,6 +182,7 @@ export default function Fase04() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'compare',
+          targetUnit: selectedUnit,
           content: {
             linhasAcao: las.map(la => ({
               id: la.id,
@@ -87,7 +195,7 @@ export default function Fase04() {
               faseamento: la.faseamento,
               sumario: la.sumario
             })),
-            criterios: f.criterios.map(c => ({
+            criterios: criterios.map(c => ({
               id: c.id,
               nome: c.nome,
               peso: c.peso
@@ -110,10 +218,8 @@ export default function Fase04() {
           newJustificativas[cellKey] = item.justificativa || ''
         })
 
-        upd({
-          pontuacoes: newPontuacoes,
-          justificativas: newJustificativas
-        })
+        setPontuacoes(newPontuacoes)
+        setJustificativas(newJustificativas)
       } else {
         setError(json.error || 'Erro ao avaliar com a IA. Verifique a chave de API.')
       }
@@ -125,9 +231,9 @@ export default function Fase04() {
 
   const ranking = [...las].sort((a, b) => getTotal(b.id) - getTotal(a.id))
 
-  const setRecomendada = (laId: string) => upd({ laRecomendada: laId })
+  const setRecomendada = (laId: string) => setLaRecomendada(laId)
 
-  if (f.criterios.length === 0 && las.length > 0) {
+  if (criterios.length === 0 && las.length > 0) {
     setTimeout(initCriterios, 0)
   }
 
@@ -137,6 +243,29 @@ export default function Fase04() {
         <div>
           <h2 className="text-military-gold font-bold text-lg">Fase 04 — Comparação das Linhas de Ação</h2>
           <p className="text-green-500 text-xs mt-1">Matriz de Decisão · APA Final · §4.3.7 PPCOT</p>
+        </div>
+      </div>
+
+      {/* Seletor de Unidade / Escalão sob Planejamento */}
+      <div className="bg-card-bg rounded-lg p-4 border border-military-gold glow-gold flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <label className="section-title mb-1">Unidade sob Planejamento (Escalão Ativo) — Fase 04</label>
+          <p className="text-green-500 text-xs">Selecione para qual escalão/unidade você está comparando as Linhas de Ação.</p>
+        </div>
+        <div className="w-full md:w-72">
+          <select
+            value={selectedUnit}
+            onChange={e => dispatch({ type: 'SET_SELECTED_UNIT', payload: e.target.value })}
+            className="input-field text-military-gold border-military-gold bg-dark-bg font-bold cursor-pointer"
+          >
+            <option value="Principal">Principal (Comando Geral / Geral da Missão)</option>
+            {(state.fase01.subordinateEchelons || []).filter(sub => sub.trim() !== '').map((sub, idx) => (
+              <option key={idx} value={sub}>{sub}</option>
+            ))}
+            {selectedUnit !== 'Principal' && !(state.fase01.subordinateEchelons || []).includes(selectedUnit) && (
+              <option value={selectedUnit}>{selectedUnit}</option>
+            )}
+          </select>
         </div>
       </div>
 
@@ -155,7 +284,7 @@ export default function Fase04() {
               <button onClick={addCriterio} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer"><Plus size={12}/> Adicionar</button>
             </div>
             <div className="space-y-2">
-              {f.criterios.map(c => (
+              {criterios.map(c => (
                 <div key={c.id} className="flex gap-2 items-center">
                   <input className="input-field flex-1 text-xs" value={c.nome} onChange={e => updCriterio(c.id, 'nome', e.target.value)} placeholder="Nome do critério..." />
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -164,7 +293,7 @@ export default function Fase04() {
                       {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
-                  <button onClick={() => upd({ criterios: f.criterios.filter(x => x.id !== c.id) })} className="text-red-600 cursor-pointer"><Trash2 size={14}/></button>
+                  <button onClick={() => setCriterios(criterios.filter(x => x.id !== c.id))} className="text-red-600 cursor-pointer"><Trash2 size={14}/></button>
                 </div>
               ))}
             </div>
@@ -195,7 +324,7 @@ export default function Fase04() {
                 </tr>
               </thead>
               <tbody>
-                {f.criterios.map(c => (
+                {criterios.map(c => (
                   <tr key={c.id} className="border-b border-green-900/50">
                     <td className="text-green-300 py-2 pr-4">{c.nome || '—'}</td>
                     <td className="text-center text-military-gold py-2 px-2">{c.peso}</td>
@@ -244,15 +373,15 @@ export default function Fase04() {
           {/* Painel de Justificativa da Célula */}
           {selectedCell && (() => {
             const la = las.find(l => l.id === selectedCell.laId)
-            const crit = f.criterios.find(c => c.id === selectedCell.criterioId)
+            const crit = criterios.find(c => c.id === selectedCell.criterioId)
             if (!la || !crit) return null
 
             const cellKey = `${selectedCell.laId}_${selectedCell.criterioId}`
-            const justificationText = f.justificativas?.[cellKey] || ''
+            const justificationText = justificativas?.[cellKey] || ''
 
             const setJustificationText = (txt: string) => {
-              const prev = f.justificativas || {}
-              upd({ justificativas: { ...prev, [cellKey]: txt } })
+              const prev = justificativas || {}
+              setJustificativas({ ...prev, [cellKey]: txt })
             }
 
             return (
@@ -297,7 +426,7 @@ export default function Fase04() {
             </div>
             <div className="space-y-3 text-xs">
               {las.map(la => {
-                const apa = f.apaFinalLA?.[la.id] || { adequabilidade: false, praticabilidade: false, aceitabilidade: false }
+                const apa = apaFinalLA?.[la.id] || { adequabilidade: false, praticabilidade: false, aceitabilidade: false }
                 const isPass = apa.adequabilidade && apa.praticabilidade && apa.aceitabilidade
                 return (
                   <div key={la.id} className="border border-green-900/60 p-3 rounded flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-black/20">
@@ -340,7 +469,7 @@ export default function Fase04() {
               {ranking.map((la, i) => {
                 const total = getTotal(la.id)
                 const pct = getMaxTotal() > 0 ? (total / getMaxTotal()) * 100 : 0
-                const isRec = f.laRecomendada === la.id
+                const isRec = laRecomendada === la.id
                 return (
                   <div key={la.id} className={`flex items-center gap-3 p-3 rounded border transition-all ${isRec ? 'border-military-gold bg-military-green/30' : 'border-green-900'}`}>
                     <span className={`font-bold text-sm w-6 ${i === 0 ? 'text-military-gold' : 'text-green-600'}`}>{i + 1}º</span>
@@ -358,11 +487,11 @@ export default function Fase04() {
                 )
               })}
             </div>
-            {f.laRecomendada && (
+            {laRecomendada && (
               <div className="mt-3">
                 <label className="text-green-500 text-xs mb-1 block">Justificativa da Recomendação</label>
-                <textarea className="textarea-field h-16" value={f.justificativa}
-                  onChange={e => upd({ justificativa: e.target.value })}
+                <textarea className="textarea-field h-16" value={justificativa}
+                  onChange={e => setJustificativaText(e.target.value)}
                   placeholder="Fundamentos para a recomendação da L Aç ao Comandante..." />
               </div>
             )}

@@ -11,13 +11,9 @@ export default function Fase01() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [showEEI, setShowEEI] = useState(true)
+  const selectedUnit = state.selectedUnit || 'Principal'
+  const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE01', payload })
 
-  const selectedUnit = f.selectedUnit || 'Principal'
-
-  const upd = (payload: Partial<typeof f>) =>
-    dispatch({ type: 'UPDATE_FASE01', payload })
-
-  // Auxiliares para ler/escrever campos dinamicamente conforme a unidade selecionada
   const getStringField = (field: 'who' | 'what' | 'when' | 'where' | 'why' | 'newMissionStatement' | 'initialIntent') => {
     if (selectedUnit === 'Principal') {
       return f[field] || ''
@@ -200,7 +196,7 @@ export default function Fase01() {
         <div className="w-full md:w-72">
           <select
             value={selectedUnit}
-            onChange={e => upd({ selectedUnit: e.target.value })}
+            onChange={e => dispatch({ type: 'SET_SELECTED_UNIT', payload: e.target.value })}
             className="input-field text-military-gold border-military-gold bg-dark-bg font-bold cursor-pointer"
           >
             <option value="Principal">Principal (Comando Geral / Geral da Missão)</option>

@@ -6,16 +6,68 @@ import { CheckCircle, Plus, Trash2, Brain, Loader, Printer } from 'lucide-react'
 export default function Fase05() {
   const { state, dispatch } = usePPCOT()
   const f = state.fase05
-  const las = state.fase03.linhasAcao
-  const laRec = state.fase04.laRecomendada
+  const selectedUnit = state.selectedUnit || 'Principal'
   const [loadingOA4, setLoadingOA4] = useState(false)
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE05', payload })
 
-  const selectedLA = las.find(la => la.id === f.laEscolhida)
+  const las = selectedUnit === 'Principal'
+    ? state.fase03.linhasAcao
+    : state.fase03.unitAnalyses?.[selectedUnit]?.linhasAcao || []
+
+  const laRec = selectedUnit === 'Principal'
+    ? state.fase04.laRecomendada
+    : state.fase04.unitAnalyses?.[selectedUnit]?.laRecomendada || ''
+
+  // Getters
+  const getField = (field: 'laEscolhida' | 'modificacoes' | 'intencaoAtualizada' | 'diplanAtualizada' | 'oa4') => {
+    if (selectedUnit === 'Principal') return f[field] || ''
+    return f.unitAnalyses?.[selectedUnit]?.[field] || ''
+  }
+
+  const getEEIAtualizados = (): string[] => {
+    if (selectedUnit === 'Principal') return f.eeiAtualizados || []
+    return f.unitAnalyses?.[selectedUnit]?.eeiAtualizados || []
+  }
+
+  // Setters
+  const setField = (field: 'laEscolhida' | 'modificacoes' | 'intencaoAtualizada' | 'diplanAtualizada' | 'oa4', value: string) => {
+    if (selectedUnit === 'Principal') {
+      upd({ [field]: value })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || {
+        laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], oa4: ''
+      }
+      analyses[selectedUnit] = { ...current, [field]: value }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const setEEIAtualizados = (eei: string[]) => {
+    if (selectedUnit === 'Principal') {
+      upd({ eeiAtualizados: eei })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || {
+        laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], oa4: ''
+      }
+      analyses[selectedUnit] = { ...current, eeiAtualizados: eei }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const laEscolhida = getField('laEscolhida')
+  const modificacoes = getField('modificacoes')
+  const intencaoAtualizada = getField('intencaoAtualizada')
+  const diplanAtualizada = getField('diplanAtualizada')
+  const oa4 = getField('oa4')
+  const eeiAtualizados = getEEIAtualizados()
+
+  const selectedLA = las.find(la => la.id === laEscolhida)
 
   const generateOA4 = async () => {
-    if (!f.laEscolhida) { alert('Selecione a Linha de Ação escolhida pelo Comandante antes de gerar a OA-4.'); return }
+    if (!laEscolhida) { alert('Selecione a Linha de Ação escolhida pelo Comandante antes de gerar a OA-4.'); return }
     setLoadingOA4(true)
     try {
       const res = await fetch('/api/analyze', {
@@ -23,18 +75,21 @@ export default function Fase05() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'oa4',
+          targetUnit: selectedUnit,
           content: {
-            mission: state.fase01.newMissionStatement || state.fase01.what,
-            laEscolhida: selectedLA ? `L Aç ${selectedLA.numero} — ${selectedLA.sumario || selectedLA.oQue}` : f.laEscolhida,
-            intencao: f.intencaoAtualizada || state.fase01.initialIntent,
-            modificacoes: f.modificacoes,
+            mission: selectedUnit === 'Principal'
+              ? (state.fase01.newMissionStatement || state.fase01.what)
+              : (state.fase01.unitAnalyses?.[selectedUnit]?.newMissionStatement || state.fase01.unitAnalyses?.[selectedUnit]?.what || state.fase01.newMissionStatement || state.fase01.what),
+            laEscolhida: selectedLA ? `L Aç ${selectedLA.numero} — ${selectedLA.sumario || selectedLA.oQue}` : laEscolhida,
+            intencao: intencaoAtualizada || (selectedUnit === 'Principal' ? state.fase01.initialIntent : (state.fase01.unitAnalyses?.[selectedUnit]?.initialIntent || state.fase01.initialIntent)),
+            modificacoes: modificacoes,
             subordinateEchelons: state.fase01.subordinateEchelons || []
           }
         }),
       })
       const json = await res.json()
       if (json.success) {
-        upd({ oa4: json.data.oa4 })
+        setField('oa4', json.data.oa4)
       } else {
         alert(json.error || 'Erro ao gerar a OA-4. Verifique a chave de API.')
       }
@@ -46,11 +101,17 @@ export default function Fase05() {
 
   const autoFillDiplan = () => {
     if (!selectedLA) return
+    const mission = selectedUnit === 'Principal'
+      ? (state.fase01.newMissionStatement || state.fase01.what)
+      : (state.fase01.unitAnalyses?.[selectedUnit]?.newMissionStatement || state.fase01.unitAnalyses?.[selectedUnit]?.what || state.fase01.newMissionStatement || state.fase01.what)
+
+    const intent = intencaoAtualizada || (selectedUnit === 'Principal' ? state.fase01.initialIntent : (state.fase01.unitAnalyses?.[selectedUnit]?.initialIntent || state.fase01.initialIntent))
+
     const diplan = `DIPLAN Nº ___
 
-1. SITUAÇÃO: ${state.fase01.newMissionStatement || state.fase01.what}
+1. SITUAÇÃO: ${mission}
 
-2. INTENÇÃO DO COMANDANTE: ${f.intencaoAtualizada || state.fase01.initialIntent}
+2. INTENÇÃO DO COMANDANTE: ${intent}
 
 3. ABORDAGEM OPERATIVA:
    - O QUÊ: ${selectedLA.oQue}
@@ -59,10 +120,10 @@ export default function Fase05() {
    - PARA QUÊ: ${selectedLA.paraQue}
    - QUANDO: ${selectedLA.quando}
 
-4. MODIFICAÇÕES DO COMANDANTE: ${f.modificacoes || 'Nenhuma modificação.'}
+4. MODIFICAÇÕES DO COMANDANTE: ${modificacoes || 'Nenhuma modificação.'}
 
 5. ORIENTAÇÕES PARA O EM: Proceder à elaboração dos planos e ordens conforme a L Aç aprovada.`
-    upd({ diplanAtualizada: diplan })
+    setField('diplanAtualizada', diplan)
   }
 
   return (
@@ -70,6 +131,29 @@ export default function Fase05() {
       <div>
         <h2 className="text-military-gold font-bold text-lg">Fase 05 — Decisão do Comandante</h2>
         <p className="text-green-500 text-xs mt-1">Escolha da L Aç · DIPLAN Atualizada · §4.3.8 PPCOT</p>
+      </div>
+
+      {/* Seletor de Unidade / Escalão sob Planejamento */}
+      <div className="bg-card-bg rounded-lg p-4 border border-military-gold glow-gold flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <label className="section-title mb-1">Unidade sob Planejamento (Escalão Ativo) — Fase 05</label>
+          <p className="text-green-500 text-xs">Selecione para qual escalão/unidade você está definindo a Decisão do Comandante.</p>
+        </div>
+        <div className="w-full md:w-72">
+          <select
+            value={selectedUnit}
+            onChange={e => dispatch({ type: 'SET_SELECTED_UNIT', payload: e.target.value })}
+            className="input-field text-military-gold border-military-gold bg-dark-bg font-bold cursor-pointer"
+          >
+            <option value="Principal">Principal (Comando Geral / Geral da Missão)</option>
+            {(state.fase01.subordinateEchelons || []).filter(sub => sub.trim() !== '').map((sub, idx) => (
+              <option key={idx} value={sub}>{sub}</option>
+            ))}
+            {selectedUnit !== 'Principal' && !(state.fase01.subordinateEchelons || []).includes(selectedUnit) && (
+              <option value={selectedUnit}>{selectedUnit}</option>
+            )}
+          </select>
+        </div>
       </div>
 
       {/* Aviso doutrinário */}
@@ -93,8 +177,8 @@ export default function Fase05() {
         <label className="section-title">Linha de Ação Escolhida pelo Comandante</label>
         <div className="space-y-2">
           {las.map(la => (
-            <label key={la.id} className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-all ${f.laEscolhida === la.id ? 'border-military-gold bg-military-green/30' : 'border-green-900 hover:border-green-700'}`}>
-              <input type="radio" name="la" value={la.id} checked={f.laEscolhida === la.id} onChange={() => upd({ laEscolhida: la.id })} className="mt-0.5 accent-yellow-500 cursor-pointer" />
+            <label key={la.id} className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition-all ${laEscolhida === la.id ? 'border-military-gold bg-military-green/30' : 'border-green-900 hover:border-green-700'}`}>
+              <input type="radio" name="la" value={la.id} checked={laEscolhida === la.id} onChange={() => setField('laEscolhida', la.id)} className="mt-0.5 accent-yellow-500 cursor-pointer" />
               <div>
                 <p className="text-white text-sm font-medium">L Aç {la.numero} {la.id === laRec ? '⭐ (Recomendada)' : ''}</p>
                 <p className="text-green-400 text-xs mt-0.5">{la.sumario || la.oQue}</p>
@@ -112,15 +196,15 @@ export default function Fase05() {
           <div>
             <label className="text-green-500 text-xs mb-1 block">Intenção Atualizada do Comandante</label>
             <textarea className="textarea-field h-20"
-              value={f.intencaoAtualizada}
-              onChange={e => upd({ intencaoAtualizada: e.target.value })}
+              value={intencaoAtualizada}
+              onChange={e => setField('intencaoAtualizada', e.target.value)}
               placeholder="Finalidade: ... / Método: ... / Estado Final Desejado: ..." />
           </div>
           <div>
             <label className="text-green-500 text-xs mb-1 block">Modificações à L Aç Escolhida</label>
             <textarea className="textarea-field h-20"
-              value={f.modificacoes}
-              onChange={e => upd({ modificacoes: e.target.value })}
+              value={modificacoes}
+              onChange={e => setField('modificacoes', e.target.value)}
               placeholder="Descreva quaisquer modificações do Cmt à L Aç selecionada..." />
           </div>
         </div>
@@ -132,8 +216,8 @@ export default function Fase05() {
           <label className="section-title">DIPLAN Atualizada</label>
           <button onClick={autoFillDiplan} className="btn-secondary text-xs cursor-pointer">✨ Preencher automaticamente</button>
         </div>
-        <textarea className="textarea-field h-40" value={f.diplanAtualizada}
-          onChange={e => upd({ diplanAtualizada: e.target.value })}
+        <textarea className="textarea-field h-40" value={diplanAtualizada}
+          onChange={e => setField('diplanAtualizada', e.target.value)}
           placeholder="Diretriz de Planejamento do Comandante atualizada..." />
       </div>
 
@@ -141,19 +225,19 @@ export default function Fase05() {
       <div className="bg-card-bg rounded-lg p-4 border border-military-green">
         <div className="flex justify-between items-center mb-3">
           <label className="section-title">EEI Atualizados</label>
-          <button onClick={() => upd({ eeiAtualizados: [...f.eeiAtualizados, ''] })} className="text-military-gold cursor-pointer"><Plus size={14}/></button>
+          <button onClick={() => setEEIAtualizados([...eeiAtualizados, ''])} className="text-military-gold cursor-pointer"><Plus size={14}/></button>
         </div>
-        {f.eeiAtualizados.length === 0 && state.fase01.eeiList.length > 0 && (
-          <button onClick={() => upd({ eeiAtualizados: [...state.fase01.eeiList] })} className="text-xs text-military-gold hover:underline mb-2 block cursor-pointer">
+        {eeiAtualizados.length === 0 && state.fase01.eeiList.length > 0 && (
+          <button onClick={() => setEEIAtualizados([...state.fase01.eeiList])} className="text-xs text-military-gold hover:underline mb-2 block cursor-pointer">
             ↑ Importar EEI da Fase 01
           </button>
         )}
-        {f.eeiAtualizados.map((eei, i) => (
+        {eeiAtualizados.map((eei, i) => (
           <div key={i} className="flex gap-2 mb-2">
             <input className="input-field text-xs" value={eei}
-              onChange={e => { const arr = [...f.eeiAtualizados]; arr[i] = e.target.value; upd({ eeiAtualizados: arr }) }}
+              onChange={e => { const arr = [...eeiAtualizados]; arr[i] = e.target.value; setEEIAtualizados(arr) }}
               placeholder={`EEI ${i + 1}`} />
-            <button onClick={() => upd({ eeiAtualizados: f.eeiAtualizados.filter((_, j) => j !== i) })} className="text-red-600 cursor-pointer"><Trash2 size={13}/></button>
+            <button onClick={() => setEEIAtualizados(eeiAtualizados.filter((_, j) => j !== i))} className="text-red-600 cursor-pointer"><Trash2 size={13}/></button>
           </div>
         ))}
       </div>
@@ -176,11 +260,11 @@ export default function Fase05() {
         </div>
         <textarea
           className="textarea-field h-48 font-mono text-xs bg-black/40"
-          value={f.oa4 || ''}
-          onChange={e => upd({ oa4: e.target.value })}
+          value={oa4 || ''}
+          onChange={e => setField('oa4', e.target.value)}
           placeholder="Texto da OA-4 em Markdown. Gerado por IA ou preenchido manualmente..."
         />
-        {f.oa4 && (
+        {oa4 && (
           <div className="flex justify-end no-print">
             <button
               onClick={() => {
@@ -201,7 +285,7 @@ export default function Fase05() {
                           4ª ORDEM DE ALERTA (OA-4) — ${state.operationName.toUpperCase()}<br/>
                           RESERVADO
                         </div>
-                        <pre>${f.oa4}</pre>
+                        <pre>${oa4}</pre>
                         <div style="text-align: center; border-top: 2px solid black; padding-top: 10px; margin-top: 20px;">
                           <strong>RESERVADO</strong>
                         </div>

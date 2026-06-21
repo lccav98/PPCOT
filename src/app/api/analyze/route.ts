@@ -242,8 +242,27 @@ Responda em JSON com esta estrutura:
   ]
 }`
     } else if (type === 'oa4') {
-      systemPrompt = `Você é um oficial de estado-maior especializado no PPCOT. Gere a 4ª Ordem de Alerta (OA-4). Responda APENAS em JSON válido.`
-      userMessage = `Gere a 4ª Ordem de Alerta (OA-4) após a decisão do Comandante:
+      const isSubordinate = targetUnit && targetUnit !== 'Principal'
+      systemPrompt = `Você é um oficial de estado-maior especializado no PPCOT. Gere a 4ª Ordem de Alerta (OA-4)${isSubordinate ? ` especificamente focada na unidade subordinada "${targetUnit}"` : ''}. Responda APENAS em JSON válido.`
+      userMessage = isSubordinate
+        ? `Gere a 4ª Ordem de Alerta (OA-4) específica para a unidade subordinada "${targetUnit}" após a decisão do Comandante para o escalão geral:
+MISSÃO DO ESCALÃO: ${content.mission}
+LINHA DE AÇÃO ESCOLHIDA PARA A UNIDADE: ${content.laEscolhida}
+INTENÇÃO DO COMANDANTE DO ESCALÃO SUPERIOR PARA ESTA UNIDADE: ${content.intencao}
+MODIFICAÇÕES DO CMT PARA ESTA UNIDADE: ${content.modificacoes}
+
+A OA-4 deve especificar diretrizes, alertas táticos e responsabilidades sob medida especificamente para a unidade subordinada "${targetUnit}":
+1. SITUAÇÃO (dados gerais atualizados e o que se espera do inimigo na área de atuação da unidade)
+2. MISSÃO (enunciado definitivo específico para a unidade "${targetUnit}")
+3. EXECUÇÃO (L Aç escolhida adaptada à unidade, tarefas específicas dela e diretrizes de coordenação)
+4. LOGÍSTICA E ADMINISTRAÇÃO (apoios administrativos específicos à unidade)
+5. COMANDO E COMUNICAÇÕES (linhas de comando, PC específico)
+
+Responda em JSON:
+{
+  "oa4": "Texto completo da OA-4 em Markdown de forma muito profissional e detalhada"
+}`
+        : `Gere a 4ª Ordem de Alerta (OA-4) geral após a decisão do Comandante:
 MISSÃO ENUNCIADA: ${content.mission}
 LINHA DE AÇÃO ESCOLHIDA: ${content.laEscolhida}
 INTENÇÃO DO COMANDANTE: ${content.intencao}

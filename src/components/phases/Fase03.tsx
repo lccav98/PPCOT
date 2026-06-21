@@ -26,8 +26,7 @@ export default function Fase03() {
   const [loading, setLoading] = useState(false)
   const [loadingSync, setLoadingSync] = useState(false)
   const [activeLA, setActiveLA] = useState(0)
-
-  const selectedUnit = f.selectedUnit || 'Principal'
+  const selectedUnit = state.selectedUnit || 'Principal'
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE03', payload })
 
@@ -207,7 +206,7 @@ export default function Fase03() {
           <select
             value={selectedUnit}
             onChange={e => {
-              upd({ selectedUnit: e.target.value })
+              dispatch({ type: 'SET_SELECTED_UNIT', payload: e.target.value })
               setActiveLA(0)
             }}
             className="input-field text-military-gold border-military-gold bg-dark-bg font-bold cursor-pointer"

@@ -4,6 +4,7 @@ import { PPCOTState, PhaseStatus, RiskMatrixItem, SyncGridCell } from './types'
 
 const initialState: PPCOTState = {
   operationName: 'Nova Operação',
+  selectedUnit: 'Principal',
   currentPhase: 1,
   fase01: {
     rawOrder: '', who: '', what: '', when: '', where: '', why: '',
@@ -26,13 +27,15 @@ const initialState: PPCOTState = {
     status: 'pending'
   },
   fase03: { psbIni: [], linhasAcao: [], matrizSincronizacao: '', syncGrid: [], selectedUnit: 'Principal', unitAnalyses: {}, status: 'pending' },
-  fase04: { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '', status: 'pending' },
-  fase05: { laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], oa4: '', status: 'pending' },
+  fase04: { criterios: [], pontuacoes: [], justificativas: {}, apaFinalLA: {}, laRecomendada: '', justificativa: '', unitAnalyses: {}, status: 'pending' },
+  fase05: { laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], oa4: '', unitAnalyses: {}, status: 'pending' },
   fase06: {
     classificacao: 'RESERVADO', numero: '', referencias: '',
     inimigo: '', forcasAmigas: '', missao: '', intencaoCmt: '',
     conceitoOperacao: '', tarefasSubordinados: '', instrucoesCoordenacao: '',
-    apoioLogistico: '', comando: '', comunicacoes: '', status: 'pending'
+    apoioLogistico: '', comando: '', comunicacoes: '',
+    unitAnalyses: {},
+    status: 'pending'
   },
   riscos: []
 }
@@ -40,6 +43,7 @@ const initialState: PPCOTState = {
 type Action =
   | { type: 'SET_OPERATION_NAME'; payload: string }
   | { type: 'SET_PHASE'; payload: number }
+  | { type: 'SET_SELECTED_UNIT'; payload: string }
   | { type: 'UPDATE_FASE01'; payload: Partial<PPCOTState['fase01']> }
   | { type: 'UPDATE_FASE02'; payload: Partial<PPCOTState['fase02']> }
   | { type: 'UPDATE_FASE03'; payload: Partial<PPCOTState['fase03']> }
@@ -53,6 +57,7 @@ function reducer(state: PPCOTState, action: Action): PPCOTState {
   switch (action.type) {
     case 'SET_OPERATION_NAME': return { ...state, operationName: action.payload }
     case 'SET_PHASE': return { ...state, currentPhase: action.payload }
+    case 'SET_SELECTED_UNIT': return { ...state, selectedUnit: action.payload }
     case 'UPDATE_FASE01': return { ...state, fase01: { ...state.fase01, ...action.payload } }
     case 'UPDATE_FASE02': return { ...state, fase02: { ...state.fase02, ...action.payload } }
     case 'UPDATE_FASE03': return { ...state, fase03: { ...state.fase03, ...action.payload } }

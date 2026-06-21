@@ -6,15 +6,61 @@ import { CheckCircle, Brain, Loader, Printer, Eye, EyeOff } from 'lucide-react'
 export default function Fase06() {
   const { state, dispatch } = usePPCOT()
   const f = state.fase06
+  const selectedUnit = state.selectedUnit || 'Principal'
   const [loading, setLoading] = useState(false)
   const [showDossier, setShowDossier] = useState(false)
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE06', payload })
 
+  // Getters
+  const getField = (field: 'classificacao' | 'numero' | 'referencias' | 'inimigo' | 'forcasAmigas' | 'missao' | 'intencaoCmt' | 'conceitoOperacao' | 'tarefasSubordinados' | 'instrucoesCoordenacao' | 'apoioLogistico' | 'comando' | 'comunicacoes') => {
+    if (selectedUnit === 'Principal') return f[field] || (field === 'classificacao' ? 'RESERVADO' : '')
+    return f.unitAnalyses?.[selectedUnit]?.[field] || (field === 'classificacao' ? 'RESERVADO' : '')
+  }
+
+  // Setters
+  const setField = (field: 'classificacao' | 'numero' | 'referencias' | 'inimigo' | 'forcasAmigas' | 'missao' | 'intencaoCmt' | 'conceitoOperacao' | 'tarefasSubordinados' | 'instrucoesCoordenacao' | 'apoioLogistico' | 'comando' | 'comunicacoes', value: string) => {
+    if (selectedUnit === 'Principal') {
+      upd({ [field]: value })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      const current = analyses[selectedUnit] || {
+        classificacao: 'RESERVADO', numero: '', referencias: '', inimigo: '', forcasAmigas: '', missao: '', intencaoCmt: '', conceitoOperacao: '', tarefasSubordinados: '', instrucoesCoordenacao: '', apoioLogistico: '', comando: '', comunicacoes: ''
+      }
+      analyses[selectedUnit] = { ...current, [field]: value }
+      upd({ unitAnalyses: analyses })
+    }
+  }
+
+  const classificacao = getField('classificacao')
+  const numero = getField('numero')
+  const referencias = getField('referencias')
+  const inimigo = getField('inimigo')
+  const forcasAmigas = getField('forcasAmigas')
+  const missao = getField('missao')
+  const intencaoCmt = getField('intencaoCmt')
+  const conceitoOperacao = getField('conceitoOperacao')
+  const tarefasSubordinados = getField('tarefasSubordinados')
+  const instrucoesCoordenacao = getField('instrucoesCoordenacao')
+  const apoioLogistico = getField('apoioLogistico')
+  const comando = getField('comando')
+  const comunicacoes = getField('comunicacoes')
+
   const generateOrder = async () => {
-    const laId = state.fase05.laEscolhida
-    const la = state.fase03.linhasAcao.find(l => l.id === laId)
-    if (!la && !state.fase05.intencaoAtualizada) { alert('Complete a Fase 05 (Decisão) antes de gerar a ordem.'); return }
+    const laEscolhida = selectedUnit === 'Principal'
+      ? state.fase05.laEscolhida
+      : state.fase05.unitAnalyses?.[selectedUnit]?.laEscolhida || ''
+
+    const intencaoEscolhida = selectedUnit === 'Principal'
+      ? state.fase05.intencaoAtualizada
+      : state.fase05.unitAnalyses?.[selectedUnit]?.intencaoAtualizada || ''
+
+    const las = selectedUnit === 'Principal'
+      ? state.fase03.linhasAcao
+      : state.fase03.unitAnalyses?.[selectedUnit]?.linhasAcao || []
+
+    const la = las.find(l => l.id === laEscolhida)
+    if (!la && !intencaoEscolhida) { alert('Complete a Fase 05 (Decisão) antes de gerar a ordem.'); return }
 
     setLoading(true)
     try {
@@ -23,10 +69,13 @@ export default function Fase06() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'orop',
+          targetUnit: selectedUnit,
           content: {
-            mission: state.fase01.newMissionStatement,
-            laAprovada: la ? `${la.oQue} / ${la.como} / ${la.faseamento}` : state.fase05.laEscolhida,
-            intencao: state.fase05.intencaoAtualizada,
+            mission: selectedUnit === 'Principal'
+              ? (state.fase01.newMissionStatement || state.fase01.what)
+              : (state.fase01.unitAnalyses?.[selectedUnit]?.newMissionStatement || state.fase01.unitAnalyses?.[selectedUnit]?.what || state.fase01.newMissionStatement || state.fase01.what),
+            laAprovada: la ? `${la.oQue} / ${la.como} / ${la.faseamento}` : laEscolhida,
+            intencao: intencaoEscolhida,
             meios: state.fase02.meiosDisponiveis,
             subordinateEchelons: state.fase01.subordinateEchelons || []
           }
@@ -34,7 +83,27 @@ export default function Fase06() {
       })
       const json = await res.json()
       if (json.success) {
-        upd({ ...json.data, status: 'in_progress' })
+        if (selectedUnit === 'Principal') {
+          upd({ ...json.data, status: 'in_progress' })
+        } else {
+          const analyses = { ...(f.unitAnalyses || {}) }
+          analyses[selectedUnit] = {
+            classificacao: json.data.classificacao || 'RESERVADO',
+            numero: json.data.numero || '',
+            referencias: json.data.referencias || '',
+            inimigo: json.data.inimigo || '',
+            forcasAmigas: json.data.forcasAmigas || '',
+            missao: json.data.missao || '',
+            intencaoCmt: json.data.intencaoCmt || '',
+            conceitoOperacao: json.data.conceitoOperacao || '',
+            tarefasSubordinados: json.data.tarefasSubordinados || '',
+            instrucoesCoordenacao: json.data.instrucoesCoordenacao || '',
+            apoioLogistico: json.data.apoioLogistico || '',
+            comando: json.data.comando || '',
+            comunicacoes: json.data.comunicacoes || ''
+          }
+          upd({ unitAnalyses: analyses, status: 'in_progress' })
+        }
       } else {
         alert(json.error || 'Erro ao gerar a Ordem de Operações. Verifique a chave de API.')
       }
@@ -45,20 +114,65 @@ export default function Fase06() {
   }
 
   const autoFill = () => {
-    const la = state.fase03.linhasAcao.find(l => l.id === state.fase05.laEscolhida)
+    const laEscolhida = selectedUnit === 'Principal'
+      ? state.fase05.laEscolhida
+      : state.fase05.unitAnalyses?.[selectedUnit]?.laEscolhida || ''
+
+    const intencaoEscolhida = selectedUnit === 'Principal'
+      ? state.fase05.intencaoAtualizada
+      : state.fase05.unitAnalyses?.[selectedUnit]?.intencaoAtualizada || ''
+
+    const las = selectedUnit === 'Principal'
+      ? state.fase03.linhasAcao
+      : state.fase03.unitAnalyses?.[selectedUnit]?.linhasAcao || []
+
+    const la = las.find(l => l.id === laEscolhida)
+
+    const syncGrid = selectedUnit === 'Principal'
+      ? state.fase03.syncGrid
+      : state.fase03.unitAnalyses?.[selectedUnit]?.syncGrid || []
+
+    const mission = selectedUnit === 'Principal'
+      ? (state.fase01.newMissionStatement || state.fase01.what)
+      : (state.fase01.unitAnalyses?.[selectedUnit]?.newMissionStatement || state.fase01.unitAnalyses?.[selectedUnit]?.what || state.fase01.newMissionStatement || state.fase01.what)
+
+    const intent = intencaoEscolhida || (selectedUnit === 'Principal' ? state.fase01.initialIntent : (state.fase01.unitAnalyses?.[selectedUnit]?.initialIntent || state.fase01.initialIntent))
+
     const subordinateTasks = state.fase01.subordinateEchelons && state.fase01.subordinateEchelons.length > 0
       ? state.fase01.subordinateEchelons.map(se => `- **${se}**: [Atribuir tarefa tática e propósito]`).join('\n\n')
       : '[Definir tarefas dos elementos subordinados]'
 
-    upd({
-      missao: state.fase01.newMissionStatement || state.fase01.what,
-      intencaoCmt: state.fase05.intencaoAtualizada || state.fase01.initialIntent,
-      inimigo: `Dispositivo: ${state.fase02.dicovap.dispositivo}\nComposição: ${state.fase02.dicovap.composicao}\nValor: ${state.fase02.dicovap.valor}`,
-      forcasAmigas: state.fase02.meiosDisponiveis,
-      conceitoOperacao: la ? `Fase I: Preparação\n- Sincronização: ${state.fase03.syncGrid?.find(c => c.fase === 'Fase I: Preparação' && c.funcao === 'Manobra')?.texto || 'Ações iniciais.'}\n\nFase II: Movimento\n- Sincronização: ${state.fase03.syncGrid?.find(c => c.fase === 'Fase II: Movimento' && c.funcao === 'Manobra')?.texto || 'Deslocamento.'}\n\nFase III: Ação\n- Manobra Principal: ${la.oQue}\n- Detalhe Execução: ${la.como}` : '',
-      tarefasSubordinados: subordinateTasks,
-      status: 'in_progress'
-    })
+    const concept = la ? `Fase I: Preparação\n- Sincronização: ${syncGrid?.find(c => c.fase === 'Fase I: Preparação' && c.funcao === 'Manobra')?.texto || 'Ações iniciais.'}\n\nFase II: Movimento\n- Sincronização: ${syncGrid?.find(c => c.fase === 'Fase II: Movimento' && c.funcao === 'Manobra')?.texto || 'Deslocamento.'}\n\nFase III: Ação\n- Manobra Principal: ${la.oQue}\n- Detalhe Execução: ${la.como}` : ''
+
+    if (selectedUnit === 'Principal') {
+      upd({
+        missao: mission,
+        intencaoCmt: intent,
+        inimigo: `Dispositivo: ${state.fase02.dicovap.dispositivo}\nComposição: ${state.fase02.dicovap.composicao}\nValor: ${state.fase02.dicovap.valor}`,
+        forcasAmigas: state.fase02.meiosDisponiveis,
+        conceitoOperacao: concept,
+        tarefasSubordinados: subordinateTasks,
+        status: 'in_progress'
+      })
+    } else {
+      const analyses = { ...(f.unitAnalyses || {}) }
+      analyses[selectedUnit] = {
+        classificacao: 'RESERVADO',
+        numero: '',
+        referencias: '',
+        missao: mission,
+        intencaoCmt: intent,
+        inimigo: `Dispositivo: ${state.fase02.dicovap.dispositivo}\nComposição: ${state.fase02.dicovap.composicao}\nValor: ${state.fase02.dicovap.valor}`,
+        forcasAmigas: state.fase02.meiosDisponiveis,
+        conceitoOperacao: concept,
+        tarefasSubordinados: subordinateTasks,
+        instrucoesCoordenacao: '',
+        apoioLogistico: '',
+        comando: '',
+        comunicacoes: ''
+      }
+      upd({ unitAnalyses: analyses, status: 'in_progress' })
+    }
   }
 
   const handlePrint = () => window.print()
@@ -108,7 +222,7 @@ export default function Fase06() {
           <div className="text-xs">
             Doutrina: EB70-MC-10.211 (PPCOT)<br/>
             Data de Emissão: {new Date().toLocaleDateString('pt-BR')}<br/>
-            CLASSIFICAÇÃO: {f.classificacao || 'RESERVADO'}
+            CLASSIFICAÇÃO: {classificacao || 'RESERVADO'}
           </div>
         </div>
 
@@ -191,13 +305,13 @@ export default function Fase06() {
             <div>
               <span className="font-bold block uppercase mb-1">DIPLAN Selecionada</span>
               <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed border border-gray-300 p-3">
-                {state.fase05.diplanAtualizada || 'Não preenchida.'}
+                {(selectedUnit === 'Principal' ? state.fase05.diplanAtualizada : (state.fase05.unitAnalyses?.[selectedUnit]?.diplanAtualizada)) || 'Não preenchida.'}
               </pre>
             </div>
             <div>
               <span className="font-bold block uppercase mb-1">4ª Ordem de Alerta (OA-4)</span>
               <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed border border-gray-300 p-3">
-                {state.fase05.oa4 || 'Não gerada.'}
+                {(selectedUnit === 'Principal' ? state.fase05.oa4 : (state.fase05.unitAnalyses?.[selectedUnit]?.oa4)) || 'Não gerada.'}
               </pre>
             </div>
           </div>
@@ -206,22 +320,36 @@ export default function Fase06() {
         {/* 5. Ordem de Operacoes */}
         <div className="print-section min-h-screen py-6">
           <div className="text-center font-bold border-b-2 border-black pb-2 mb-4">
-            {f.classificacao?.toUpperCase() || 'RESERVADO'}<br/>
-            ORDEM DE OPERAÇÕES (O Op) — {f.numero || 'OOp Nº ___'}<br/>
+            {classificacao?.toUpperCase() || 'RESERVADO'}<br/>
+            ORDEM DE OPERAÇÕES (O Op) — {numero || 'OOp Nº ___'}<br/>
             {state.operationName.toUpperCase()}
           </div>
           <div className="space-y-4 text-xs font-mono">
-            {sections.filter(s => s.key !== 'classificacao' && s.key !== 'numero').map(sec => (
-              <div key={sec.key}>
-                <span className="font-bold block uppercase">{sec.label}</span>
-                <p className="whitespace-pre-wrap pl-4 border-l border-gray-400 text-gray-800 text-[11px] leading-relaxed">
-                  {(f as any)[sec.key] || '—'}
-                </p>
-              </div>
-            ))}
+            {sections.filter(s => s.key !== 'classificacao' && s.key !== 'numero').map(sec => {
+              const val = sec.key === 'referencias' ? referencias
+                : sec.key === 'inimigo' ? inimigo
+                : sec.key === 'forcasAmigas' ? forcasAmigas
+                : sec.key === 'missao' ? missao
+                : sec.key === 'intencaoCmt' ? intencaoCmt
+                : sec.key === 'conceitoOperacao' ? conceitoOperacao
+                : sec.key === 'tarefasSubordinados' ? tarefasSubordinados
+                : sec.key === 'instrucoesCoordenacao' ? instrucoesCoordenacao
+                : sec.key === 'apoioLogistico' ? apoioLogistico
+                : sec.key === 'comando' ? comando
+                : sec.key === 'comunicacoes' ? comunicacoes
+                : '';
+              return (
+                <div key={sec.key}>
+                  <span className="font-bold block uppercase">{sec.label}</span>
+                  <p className="whitespace-pre-wrap pl-4 border-l border-gray-400 text-gray-800 text-[11px] leading-relaxed">
+                    {val || '—'}
+                  </p>
+                </div>
+              );
+            })}
           </div>
           <div className="text-center font-bold border-t-2 border-black pt-2 mt-8">
-            {f.classificacao?.toUpperCase() || 'RESERVADO'}
+            {classificacao?.toUpperCase() || 'RESERVADO'}
           </div>
         </div>
       </div>
@@ -230,11 +358,38 @@ export default function Fase06() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-in">
         <div>
           <h2 className="text-military-gold font-bold text-lg">Fase 06 — Emissão de Planos e Ordens</h2>
           <p className="text-green-500 text-xs mt-1">Ordem de Operações · §4.3.9 PPCOT</p>
         </div>
+      </div>
+
+      {/* Seletor de Unidade / Escalão sob Planejamento */}
+      <div className="bg-card-bg rounded-lg p-4 border border-military-gold glow-gold flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+        <div>
+          <label className="section-title mb-1">Unidade sob Planejamento (Escalão Ativo) — Fase 06</label>
+          <p className="text-green-500 text-xs">Selecione para qual escalão/unidade você está emitindo a Ordem de Operações.</p>
+        </div>
+        <div className="w-full md:w-72">
+          <select
+            value={selectedUnit}
+            onChange={e => dispatch({ type: 'SET_SELECTED_UNIT', payload: e.target.value })}
+            className="input-field text-military-gold border-military-gold bg-dark-bg font-bold cursor-pointer"
+          >
+            <option value="Principal">Principal (Comando Geral / Geral da Missão)</option>
+            {(state.fase01.subordinateEchelons || []).filter(sub => sub.trim() !== '').map((sub, idx) => (
+              <option key={idx} value={sub}>{sub}</option>
+            ))}
+            {selectedUnit !== 'Principal' && !(state.fase01.subordinateEchelons || []).includes(selectedUnit) && (
+              <option value={selectedUnit}>{selectedUnit}</option>
+            )}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div></div>
         <div className="flex gap-2 no-print">
           <button onClick={() => setShowDossier(true)} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer">
             <Eye size={12}/> Visualizar Dossiê Completo
@@ -257,29 +412,45 @@ export default function Fase06() {
         {/* Header da OOp */}
         <div className="bg-military-green p-4 text-center border-b border-military-gold print-section">
           <p className="text-military-gold font-bold text-xs tracking-widest uppercase">
-            {f.classificacao || 'RESERVADO'}
+            {classificacao || 'RESERVADO'}
           </p>
           <p className="text-white font-bold text-sm mt-1">EXÉRCITO BRASILEIRO</p>
-          <p className="text-green-300 text-xs">{state.operationName.toUpperCase()} — {f.numero || 'OOp Nº ___'}</p>
+          <p className="text-green-300 text-xs">{state.operationName.toUpperCase()} — {numero || 'OOp Nº ___'}</p>
         </div>
 
         <div className="p-4 space-y-4">
-          {sections.map(({ key, label, ph }) => (
-            <div key={key} className="border-b border-green-900/50 pb-3">
-              <label className="text-military-gold text-xs font-bold uppercase tracking-wider block mb-1">{label}</label>
-              <textarea
-                className="textarea-field text-xs h-16"
-                value={(f as any)[key]}
-                onChange={e => upd({ [key]: e.target.value } as any)}
-                placeholder={ph}
-              />
-            </div>
-          ))}
+          {sections.map(({ key, label, ph }) => {
+            const val = key === 'classificacao' ? classificacao
+              : key === 'numero' ? numero
+              : key === 'referencias' ? referencias
+              : key === 'inimigo' ? inimigo
+              : key === 'forcasAmigas' ? forcasAmigas
+              : key === 'missao' ? missao
+              : key === 'intencaoCmt' ? intencaoCmt
+              : key === 'conceitoOperacao' ? conceitoOperacao
+              : key === 'tarefasSubordinados' ? tarefasSubordinados
+              : key === 'instrucoesCoordenacao' ? instrucoesCoordenacao
+              : key === 'apoioLogistico' ? apoioLogistico
+              : key === 'comando' ? comando
+              : key === 'comunicacoes' ? comunicacoes
+              : '';
+            return (
+              <div key={key} className="border-b border-green-900/50 pb-3">
+                <label className="text-military-gold text-xs font-bold uppercase tracking-wider block mb-1">{label}</label>
+                <textarea
+                  className="textarea-field text-xs h-16"
+                  value={val}
+                  onChange={e => setField(key as any, e.target.value)}
+                  placeholder={ph}
+                />
+              </div>
+            );
+          })}
         </div>
 
         <div className="p-4 bg-military-green/20 border-t border-military-gold text-center">
           <p className="text-military-gold text-xs font-bold tracking-widest">
-            {f.classificacao || 'RESERVADO'}
+            {classificacao || 'RESERVADO'}
           </p>
         </div>
       </div>

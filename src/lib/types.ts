@@ -85,17 +85,44 @@ export interface LinhasAcaoData {
 
 export interface CriterioAvaliacao { id: string; nome: string; peso: number }
 
+export interface UnitComparacaoAnalysis {
+  criterios: CriterioAvaliacao[]
+  pontuacoes: { laId: string; criterioId: string; pontos: number }[]
+  justificativas?: Record<string, string>
+  apaFinalLA: Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }>
+  laRecomendada: string
+  justificativa: string
+}
+
 export interface ComparacaoData {
   criterios: CriterioAvaliacao[]
   pontuacoes: { laId: string; criterioId: string; pontos: number }[]
   justificativas?: Record<string, string>
   apaFinalLA: Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }>
   laRecomendada: string; justificativa: string; status: PhaseStatus
+  unitAnalyses?: Record<string, UnitComparacaoAnalysis>
+}
+
+export interface UnitDecisaoAnalysis {
+  laEscolhida: string
+  modificacoes: string
+  intencaoAtualizada: string
+  diplanAtualizada: string
+  eeiAtualizados: string[]
+  oa4: string
 }
 
 export interface DecisaoData {
   laEscolhida: string; modificacoes: string; intencaoAtualizada: string
   diplanAtualizada: string; eeiAtualizados: string[]; oa4: string; status: PhaseStatus
+  unitAnalyses?: Record<string, UnitDecisaoAnalysis>
+}
+
+export interface UnitOrdemOperacoesAnalysis {
+  classificacao: string; numero: string; referencias: string
+  inimigo: string; forcasAmigas: string; missao: string; intencaoCmt: string
+  conceitoOperacao: string; tarefasSubordinados: string; instrucoesCoordenacao: string
+  apoioLogistico: string; comando: string; comunicacoes: string
 }
 
 export interface OrdemOperacoes {
@@ -103,6 +130,7 @@ export interface OrdemOperacoes {
   inimigo: string; forcasAmigas: string; missao: string; intencaoCmt: string
   conceitoOperacao: string; tarefasSubordinados: string; instrucoesCoordenacao: string
   apoioLogistico: string; comando: string; comunicacoes: string; status: PhaseStatus
+  unitAnalyses?: Record<string, UnitOrdemOperacoesAnalysis>
 }
 
 export interface RiskMatrixItem {
@@ -115,8 +143,9 @@ export interface RiskMatrixItem {
 }
 
 export interface PPCOTState {
-  operationName: string; fase01: MissionAnalysis; fase02: SituacaoAnalysis
+  operationName: string; selectedUnit: string; fase01: MissionAnalysis; fase02: SituacaoAnalysis
   fase03: LinhasAcaoData; fase04: ComparacaoData; fase05: DecisaoData
   fase06: OrdemOperacoes; riscos: RiskMatrixItem[]; currentPhase: number
 }
+
 
