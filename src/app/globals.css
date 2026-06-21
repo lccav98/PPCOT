@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --military-green: #1a3c2b;
+  --military-green-light: #2d5a3d;
+  --military-gold: #c8a94a;
+  --military-gold-light: #e8c96a;
+  --dark-bg: #0f1f17;
+  --card-bg: #152a1e;
+}
+
+body {
+  background-color: var(--dark-bg);
+  color: #e8f5e9;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.phase-card {
+  @apply bg-card-bg border border-military-green rounded-lg p-4 transition-all duration-200;
+}
+
+.phase-card:hover {
+  @apply border-military-gold;
+}
+
+.btn-primary {
+  @apply bg-military-gold text-military-green font-bold py-2 px-4 rounded hover:bg-military-gold-light transition-colors;
+}
+
+.btn-secondary {
+  @apply border border-military-gold text-military-gold py-2 px-4 rounded hover:bg-military-green transition-colors;
+}
+
+.input-field {
+  @apply bg-dark-bg border border-military-green rounded px-3 py-2 text-green-100 w-full
+         focus:outline-none focus:border-military-gold placeholder-green-700 text-sm;
+}
+
+.textarea-field {
+  @apply bg-dark-bg border border-military-green rounded px-3 py-2 text-green-100 w-full
+         focus:outline-none focus:border-military-gold placeholder-green-700 text-sm resize-none;
+}
+
+.section-title {
+  @apply text-military-gold font-bold text-sm uppercase tracking-widest mb-3;
+}
+
+.badge-verde { @apply bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full; }
+.badge-amarelo { @apply bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full; }
+.badge-vermelho { @apply bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full; }
+.badge-pending { @apply bg-gray-800 text-gray-400 text-xs px-2 py-1 rounded-full; }
+.badge-completed { @apply bg-green-900 text-green-400 text-xs px-2 py-1 rounded-full; }
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse-gold { animation: pulse-gold 2s ease-in-out infinite; }
+
+/* Print styles */
+@media print {
+  body { background: white; color: black; }
+  .no-print { display: none !important; }
+  .print-section { break-inside: avoid; }
+}
