@@ -1,12 +1,13 @@
 'use client'
 import { useState } from 'react'
 import { usePPCOT } from '@/lib/store'
-import { CheckCircle, Brain, Loader, Printer, Download } from 'lucide-react'
+import { CheckCircle, Brain, Loader, Printer, Eye, EyeOff } from 'lucide-react'
 
 export default function Fase06() {
   const { state, dispatch } = usePPCOT()
   const f = state.fase06
   const [loading, setLoading] = useState(false)
+  const [showDossier, setShowDossier] = useState(false)
 
   const upd = (payload: Partial<typeof f>) => dispatch({ type: 'UPDATE_FASE06', payload })
 
@@ -43,7 +44,7 @@ export default function Fase06() {
       intencaoCmt: state.fase05.intencaoAtualizada || state.fase01.initialIntent,
       inimigo: `Dispositivo: ${state.fase02.dicovap.dispositivo}\nComposição: ${state.fase02.dicovap.composicao}\nValor: ${state.fase02.dicovap.valor}`,
       forcasAmigas: state.fase02.meiosDisponiveis,
-      conceitoOperacao: la ? `Fase 1: ${la.faseamento?.split('/')[0] || la.oQue}\n\nEsquema de Manobra: ${la.como}` : '',
+      conceitoOperacao: la ? `Fase I: Preparação\n- Sincronização: ${state.fase03.syncGrid?.find(c => c.fase === 'Fase I: Preparação' && c.funcao === 'Manobra')?.texto || 'Ações iniciais.'}\n\nFase II: Movimento\n- Sincronização: ${state.fase03.syncGrid?.find(c => c.fase === 'Fase II: Movimento' && c.funcao === 'Manobra')?.texto || 'Deslocamento.'}\n\nFase III: Ação\n- Manobra Principal: ${la.oQue}\n- Detalhe Execução: ${la.como}` : '',
       status: 'in_progress'
     })
   }
@@ -66,6 +67,155 @@ export default function Fase06() {
     { key: 'comunicacoes', label: '5b. Comunicações', ph: 'Redes, frequências, plano de comunicações...' },
   ]
 
+  if (showDossier) {
+    return (
+      <div className="bg-white text-black p-8 font-mono text-xs max-w-4xl mx-auto space-y-8 select-text">
+        <div className="flex justify-between items-center no-print border-b border-gray-300 pb-3 mb-6">
+          <span className="font-sans font-bold text-gray-700">Dossiê de Planejamento Tático (Visualização de Impressão)</span>
+          <div className="flex gap-2">
+            <button onClick={() => setShowDossier(false)} className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded font-sans cursor-pointer text-gray-800">
+              Voltar ao Editor
+            </button>
+            <button onClick={handlePrint} className="px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white rounded font-sans cursor-pointer">
+              Confirmar Impressão / PDF
+            </button>
+          </div>
+        </div>
+
+        {/* Capa */}
+        <div className="text-center py-20 border-b-2 border-double border-black min-h-screen flex flex-col justify-between items-center">
+          <div className="uppercase font-bold tracking-widest text-sm">
+            EXÉRCITO BRASILEIRO<br/>
+            {state.operationName}
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-2xl font-black uppercase tracking-widest">DOSSIÊ INTEGRADO DE PLANEJAMENTO</h1>
+            <p className="text-sm">Fases 01 a 06 do Exame de Situação do Comandante</p>
+            <div className="h-0.5 w-32 bg-black mx-auto"></div>
+          </div>
+          <div className="text-xs">
+            Doutrina: EB70-MC-10.211 (PPCOT)<br/>
+            Data de Emissão: {new Date().toLocaleDateString('pt-BR')}<br/>
+            CLASSIFICAÇÃO: {f.classificacao || 'RESERVADO'}
+          </div>
+        </div>
+
+        {/* 1. Ordem de Alerta 1 */}
+        <div className="print-section min-h-screen py-6 border-b border-gray-300">
+          <h2 className="text-sm font-bold border-b border-black pb-1 mb-3">1. 1ª ORDEM DE ALERTA (OA-1)</h2>
+          <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
+            {state.fase01.oa1 || 'Não gerada.'}
+          </pre>
+        </div>
+
+        {/* 2. Estimativas Correntes */}
+        <div className="print-section min-h-screen py-6 border-b border-gray-300">
+          <h2 className="text-sm font-bold border-b border-black pb-1 mb-3">2. ESTIMATIVAS CORRENTES DE SEÇÕES (S2 a S5)</h2>
+          <div className="space-y-4">
+            {['s2', 's3', 's4', 's5'].map(sec => (
+              <div key={sec} className="border border-gray-300 p-3 rounded">
+                <span className="font-bold block uppercase mb-1">Seção {sec.toUpperCase()}</span>
+                <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed">
+                  {(state.fase02.estimativas as any)?.[sec] || 'Não preenchido.'}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 3. Riscos e Sincronizacao */}
+        <div className="print-section min-h-screen py-6 border-b border-gray-300">
+          <h2 className="text-sm font-bold border-b border-black pb-1 mb-3">3. ANÁLISE DE RISCOS E SINCRONIZAÇÃO</h2>
+          <h3 className="font-bold mb-2">Matriz de Riscos:</h3>
+          <table className="w-full border-collapse border border-black mb-6">
+            <thead>
+              <tr className="bg-gray-100 font-bold">
+                <th className="border border-black p-1.5">Descrição do Risco</th>
+                <th className="border border-black p-1.5 text-center w-16">Nível</th>
+                <th className="border border-black p-1.5">Mitigação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {state.riscos?.map(r => (
+                <tr key={r.id}>
+                  <td className="border border-black p-1.5">{r.descricao}</td>
+                  <td className="border border-black p-1.5 text-center uppercase font-bold">{r.nivel}</td>
+                  <td className="border border-black p-1.5 italic">{r.mitigacao}</td>
+                </tr>
+              ))}
+              {(!state.riscos || state.riscos.length === 0) && (
+                <tr><td colSpan={3} className="border border-black p-4 text-center italic">Nenhum risco registrado.</td></tr>
+              )}
+            </tbody>
+          </table>
+
+          <h3 className="font-bold mb-2">Matriz de Sincronização:</h3>
+          <table className="w-full border-collapse border border-black">
+            <thead>
+              <tr className="bg-gray-100 font-bold text-[10px]">
+                <th className="border border-black p-1.5 text-left w-24">Função / Fase</th>
+                {['Fase I', 'Fase II', 'Fase III', 'Fase IV'].map(col => <th key={col} className="border border-black p-1.5 text-center">{col}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {['Manobra', 'Inteligência', 'Fogos', 'Logística', 'Comando e Controle', 'Assuntos Civis'].map(row => (
+                <tr key={row}>
+                  <td className="border border-black p-1 font-bold bg-gray-50">{row}</td>
+                  {['Fase I: Preparação', 'Fase II: Movimento', 'Fase III: Ação', 'Fase IV: Consolidação'].map(col => (
+                    <td key={col} className="border border-black p-1 text-[10px]">
+                      {state.fase03.syncGrid?.find(c => c.fase === col && c.funcao === row)?.texto || '—'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 4. DIPLAN e Ordem de Alerta 4 */}
+        <div className="print-section min-h-screen py-6 border-b border-gray-300">
+          <h2 className="text-sm font-bold border-b border-black pb-1 mb-3">4. DIRETRIZ DE PLANEJAMENTO (DIPLAN) E 4ª ORDEM DE ALERTA</h2>
+          <div className="grid grid-cols-1 gap-6">
+            <div>
+              <span className="font-bold block uppercase mb-1">DIPLAN Selecionada</span>
+              <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed border border-gray-300 p-3">
+                {state.fase05.diplanAtualizada || 'Não preenchida.'}
+              </pre>
+            </div>
+            <div>
+              <span className="font-bold block uppercase mb-1">4ª Ordem de Alerta (OA-4)</span>
+              <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed border border-gray-300 p-3">
+                {state.fase05.oa4 || 'Não gerada.'}
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Ordem de Operacoes */}
+        <div className="print-section min-h-screen py-6">
+          <div className="text-center font-bold border-b-2 border-black pb-2 mb-4">
+            {f.classificacao?.toUpperCase() || 'RESERVADO'}<br/>
+            ORDEM DE OPERAÇÕES (O Op) — {f.numero || 'OOp Nº ___'}<br/>
+            {state.operationName.toUpperCase()}
+          </div>
+          <div className="space-y-4 text-xs font-mono">
+            {sections.filter(s => s.key !== 'classificacao' && s.key !== 'numero').map(sec => (
+              <div key={sec.key}>
+                <span className="font-bold block uppercase">{sec.label}</span>
+                <p className="whitespace-pre-wrap pl-4 border-l border-gray-400 text-gray-800 text-[11px] leading-relaxed">
+                  {(f as any)[sec.key] || '—'}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center font-bold border-t-2 border-black pt-2 mt-8">
+            {f.classificacao?.toUpperCase() || 'RESERVADO'}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -74,15 +224,18 @@ export default function Fase06() {
           <p className="text-green-500 text-xs mt-1">Ordem de Operações · §4.3.9 PPCOT</p>
         </div>
         <div className="flex gap-2 no-print">
-          <button onClick={autoFill} className="btn-secondary text-xs flex items-center gap-1">
+          <button onClick={() => setShowDossier(true)} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer">
+            <Eye size={12}/> Visualizar Dossiê Completo
+          </button>
+          <button onClick={autoFill} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer">
             ✨ Preencher dos dados
           </button>
-          <button onClick={generateOrder} disabled={loading} className="btn-secondary text-xs flex items-center gap-1">
+          <button onClick={generateOrder} disabled={loading} className="btn-secondary text-xs flex items-center gap-1 cursor-pointer">
             {loading ? <Loader size={12} className="animate-spin"/> : <Brain size={12}/>}
             {loading ? 'Gerando...' : 'Gerar com IA'}
           </button>
-          <button onClick={handlePrint} className="btn-primary text-xs flex items-center gap-1">
-            <Printer size={12}/> Imprimir
+          <button onClick={handlePrint} className="btn-primary text-xs flex items-center gap-1 cursor-pointer">
+            <Printer size={12}/> Imprimir O Op
           </button>
         </div>
       </div>
@@ -120,7 +273,7 @@ export default function Fase06() {
       </div>
 
       <div className="flex justify-end gap-3">
-        <button onClick={() => upd({ status: 'completed' })} className="btn-primary flex items-center gap-2">
+        <button onClick={() => upd({ status: 'completed' })} className="btn-primary flex items-center gap-2 cursor-pointer">
           <CheckCircle size={16} /> Finalizar Planejamento
         </button>
       </div>

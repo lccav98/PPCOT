@@ -1,6 +1,6 @@
 'use client'
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
-import { PPCOTState, PhaseStatus } from './types'
+import { PPCOTState, PhaseStatus, RiskMatrixItem, SyncGridCell } from './types'
 
 const initialState: PPCOTState = {
   operationName: 'Nova Operação',
@@ -8,7 +8,7 @@ const initialState: PPCOTState = {
   fase01: {
     rawOrder: '', who: '', what: '', when: '', where: '', why: '',
     assignedTasks: [], impliedTasks: [], restrictions: [],
-    newMissionStatement: '', initialIntent: '', eeiList: [], timePlan: '',
+    newMissionStatement: '', initialIntent: '', eeiList: [], timePlan: '', oa1: '',
     status: 'pending'
   },
   fase02: {
@@ -17,17 +17,20 @@ const initialState: PPCOTState = {
     visibilidade: '', vento: '', precipitacao: '', temperatura: '',
     meiosDisponiveis: '', prc: '', tempoPlj: '', tempoExec: '',
     areas: '', estruturas: '', capacidades: '', organizacoes: '', pessoas: '', eventos: '',
-    fff: { forcas: [], fraquezas: [] }, influenciaOponente: '', status: 'pending'
+    fff: { forcas: [], fraquezas: [] }, influenciaOponente: '',
+    estimativas: { s2: '', s3: '', s4: '', s5: '' },
+    status: 'pending'
   },
-  fase03: { psbIni: [], linhasAcao: [], matrizSincronizacao: '', status: 'pending' },
+  fase03: { psbIni: [], linhasAcao: [], matrizSincronizacao: '', syncGrid: [], status: 'pending' },
   fase04: { criterios: [], pontuacoes: [], apaFinalLA: {}, laRecomendada: '', justificativa: '', status: 'pending' },
-  fase05: { laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], status: 'pending' },
+  fase05: { laEscolhida: '', modificacoes: '', intencaoAtualizada: '', diplanAtualizada: '', eeiAtualizados: [], oa4: '', status: 'pending' },
   fase06: {
     classificacao: 'RESERVADO', numero: '', referencias: '',
     inimigo: '', forcasAmigas: '', missao: '', intencaoCmt: '',
     conceitoOperacao: '', tarefasSubordinados: '', instrucoesCoordenacao: '',
     apoioLogistico: '', comando: '', comunicacoes: '', status: 'pending'
-  }
+  },
+  riscos: []
 }
 
 type Action =
@@ -39,6 +42,7 @@ type Action =
   | { type: 'UPDATE_FASE04'; payload: Partial<PPCOTState['fase04']> }
   | { type: 'UPDATE_FASE05'; payload: Partial<PPCOTState['fase05']> }
   | { type: 'UPDATE_FASE06'; payload: Partial<PPCOTState['fase06']> }
+  | { type: 'UPDATE_RISKS'; payload: RiskMatrixItem[] }
   | { type: 'RESET' }
 
 function reducer(state: PPCOTState, action: Action): PPCOTState {
@@ -51,6 +55,7 @@ function reducer(state: PPCOTState, action: Action): PPCOTState {
     case 'UPDATE_FASE04': return { ...state, fase04: { ...state.fase04, ...action.payload } }
     case 'UPDATE_FASE05': return { ...state, fase05: { ...state.fase05, ...action.payload } }
     case 'UPDATE_FASE06': return { ...state, fase06: { ...state.fase06, ...action.payload } }
+    case 'UPDATE_RISKS': return { ...state, riscos: action.payload }
     case 'RESET': return initialState
     default: return state
   }
@@ -80,3 +85,4 @@ export function usePPCOT() {
   if (!ctx) throw new Error('usePPCOT must be used inside PPCOTProvider')
   return ctx
 }
+

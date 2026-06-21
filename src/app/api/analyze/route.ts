@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ success: false, error: 'GEMINI_API_KEY não configurada em .env.local' }, { status: 500 })
+  }
+
   try {
     const { type, content } = await req.json()
 
@@ -89,20 +91,124 @@ Responda em JSON:
   "comando": "Posto de Comando e linha de sucessão de comando",
   "comunicacoes": "Redes de comunicações e frequências"
 }`
+    } else if (type === 'oa1') {
+      systemPrompt = `Você é um oficial de estado-maior especializado no PPCOT. Gere a 1ª Ordem de Alerta (OA-1) em Markdown. Responda APENAS em JSON válido.`
+      userMessage = `Gere a 1ª Ordem de Alerta (OA-1) com base nas informações da missão:
+MISSÃO: ${content.mission}
+INTENÇÃO INICIAL DO COMANDANTE: ${content.intent}
+PLANO DE UTILIZAÇÃO DO TEMPO: ${content.timePlan}
+EEIs INICIAIS: ${JSON.stringify(content.eeiList)}
+
+A OA-1 deve seguir a estrutura padrão do manual PPCOT:
+1. SITUAÇÃO (dados gerais preliminares)
+2. MISSÃO (enunciado preliminar)
+3. EXECUÇÃO (plano do tempo, EEI, orientações preliminares do EM)
+4. LOGÍSTICA E ADMINISTRAÇÃO (instruções administrativas de movimentação)
+5. COMANDO E COMUNICAÇÕES (linhas de comando, PC inicial)
+
+Responda em JSON:
+{
+  "oa1": "Texto completo da OA-1 em Markdown de forma muito profissional e detalhada"
+}`
+    } else if (type === 'estimativas') {
+      systemPrompt = `Você é um assessor de estado-maior especializado no PPCOT. Gere estimativas correntes para as seções S2, S3, S4 e S5. Responda APENAS em JSON válido.`
+      userMessage = `Com base nas seguintes informações de planejamento:
+MISSÃO: ${content.mission}
+INIMIGO (DICOVAP): ${JSON.stringify(content.dicovap)}
+TERRENO (OCOAV): ${JSON.stringify(content.ocoav)}
+METEO: Visibilidade: ${content.visibilidade}, Vento: ${content.vento}, Precipitação: ${content.precipitacao}, Temperatura: ${content.temperatura}
+MEIOS: ${content.means}
+CONSIDERAÇÕES CIVIS: Áreas: ${content.areas}, Estruturas: ${content.estruturas}, Capacidades: ${content.capacidades}, Organizações: ${content.organizacoes}, Pessoas: ${content.pessoas}, Eventos: ${content.eventos}
+
+Gere estimativas correntes concisas para cada seção funcional do EM:
+S2 (Inteligência): Análise de ameaças e terreno.
+S3 (Operações): Condições táticas e possibilidades de manobra.
+S4 (Logística): Apoio de serviço ao combate.
+S5 (Assuntos Civis): Impacto na população local.
+
+Responda em JSON:
+{
+  "s2": "Estimativa resumida S2 em Markdown",
+  "s3": "Estimativa resumida S3 em Markdown",
+  "s4": "Estimativa resumida S4 em Markdown",
+  "s5": "Estimativa resumida S5 em Markdown"
+}`
+    } else if (type === 'sync') {
+      systemPrompt = `Você é um oficial de estado-maior especialista em sincronização tática conforme o PPCOT. Gere células de uma grade de sincronização. Responda APENAS em JSON válido.`
+      userMessage = `Com base na Linha de Ação formulada:
+O QUÊ: ${content.la.oQue}
+COMO: ${content.la.como}
+ONDE: ${content.la.onde}
+PARA QUÊ: ${content.la.paraQue}
+FASEAMENTO: ${content.la.faseamento}
+
+Gere o conteúdo da Matriz de Sincronização em formato JSON contendo uma lista de objetos. As colunas são as Fases da Operação: "Fase I: Preparação", "Fase II: Movimento", "Fase III: Ação", "Fase IV: Consolidação".
+As linhas são as Funções de Combate: "Manobra", "Inteligência", "Fogos", "Logística", "Comando e Controle", "Assuntos Civis".
+
+Gere de 1 a 2 frases táticas e precisas para cada cruzamento aplicável de Fase e Função de Combate.
+
+Responda em JSON com esta estrutura:
+{
+  "syncGrid": [
+    { "fase": "Fase I: Preparação", "funcao": "Manobra", "texto": "Ações de manobra na Fase I..." },
+    ...
+  ]
+}`
+    } else if (type === 'oa4') {
+      systemPrompt = `Você é um oficial de estado-maior especializado no PPCOT. Gere a 4ª Ordem de Alerta (OA-4). Responda APENAS em JSON válido.`
+      userMessage = `Gere a 4ª Ordem de Alerta (OA-4) após a decisão do Comandante:
+MISSÃO ENUNCIADA: ${content.mission}
+LINHA DE AÇÃO ESCOLHIDA: ${content.laEscolhida}
+INTENÇÃO DO COMANDANTE: ${content.intencao}
+MODIFICAÇÕES: ${content.modificacoes}
+
+A OA-4 deve conter:
+1. SITUAÇÃO (dados gerais atualizados)
+2. MISSÃO (enunciado definitivo)
+3. EXECUÇÃO (L Aç escolhida, conceito geral, tarefas e diretrizes)
+4. LOGÍSTICA E ADMINISTRAÇÃO (apoios administrativos)
+5. COMANDO E COMUNICAÇÕES (linhas de comando, PC)
+
+Responda em JSON:
+{
+  "oa4": "Texto completo da OA-4 em Markdown de forma muito profissional e detalhada"
+}`
     }
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-5',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: userMessage }],
-      system: systemPrompt,
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: userMessage }]
+          }
+        ],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          responseMimeType: 'application/json'
+        }
+      })
     })
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : ''
+    if (!response.ok) {
+      const errText = await response.text()
+      throw new Error(`Erro na API do Gemini: ${response.status} - ${errText}`)
+    }
+
+    const json = await response.json()
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const parsed = JSON.parse(text)
     return NextResponse.json({ success: true, data: parsed })
-  } catch (error) {
-    console.error('AI analysis error:', error)
-    return NextResponse.json({ success: false, error: 'Erro na análise de IA' }, { status: 500 })
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('AI analysis error:', msg)
+    return NextResponse.json({ success: false, error: msg }, { status: 500 })
   }
 }

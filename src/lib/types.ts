@@ -4,7 +4,7 @@ export interface MissionAnalysis {
   rawOrder: string; who: string; what: string; when: string; where: string; why: string
   assignedTasks: string[]; impliedTasks: string[]; restrictions: string[]
   newMissionStatement: string; initialIntent: string; eeiList: string[]
-  timePlan: string; status: PhaseStatus
+  timePlan: string; oa1: string; status: PhaseStatus
 }
 
 export interface DICOVAPFactor {
@@ -15,13 +15,22 @@ export interface OCOAVFactor {
   observacao: string; cobertas: string; obstaculos: string; acidentesCapitais: string; viasDeAcesso: string
 }
 
+export interface EstimativasData {
+  s2: string
+  s3: string
+  s4: string
+  s5: string
+}
+
 export interface SituacaoAnalysis {
   dicovap: DICOVAPFactor; ocoav: OCOAVFactor
   visibilidade: string; vento: string; precipitacao: string; temperatura: string
   meiosDisponiveis: string; prc: string; tempoPlj: string; tempoExec: string
   areas: string; estruturas: string; capacidades: string; organizacoes: string; pessoas: string; eventos: string
   fff: { forcas: string[]; fraquezas: string[] }
-  influenciaOponente: 'verde' | 'amarelo' | 'vermelho' | ''; status: PhaseStatus
+  influenciaOponente: 'verde' | 'amarelo' | 'vermelho' | ''
+  estimativas: EstimativasData
+  status: PhaseStatus
 }
 
 export interface LinhaDeAcao {
@@ -35,8 +44,14 @@ export interface PsbIni {
   id: string; descricao: string; probabilidade: 'alta' | 'media' | 'baixa'; impacto: string
 }
 
+export interface SyncGridCell {
+  fase: string
+  funcao: string
+  texto: string
+}
+
 export interface LinhasAcaoData {
-  psbIni: PsbIni[]; linhasAcao: LinhaDeAcao[]; matrizSincronizacao: string; status: PhaseStatus
+  psbIni: PsbIni[]; linhasAcao: LinhaDeAcao[]; matrizSincronizacao: string; syncGrid: SyncGridCell[]; status: PhaseStatus
 }
 
 export interface CriterioAvaliacao { id: string; nome: string; peso: number }
@@ -50,7 +65,7 @@ export interface ComparacaoData {
 
 export interface DecisaoData {
   laEscolhida: string; modificacoes: string; intencaoAtualizada: string
-  diplanAtualizada: string; eeiAtualizados: string[]; status: PhaseStatus
+  diplanAtualizada: string; eeiAtualizados: string[]; oa4: string; status: PhaseStatus
 }
 
 export interface OrdemOperacoes {
@@ -60,8 +75,18 @@ export interface OrdemOperacoes {
   apoioLogistico: string; comando: string; comunicacoes: string; status: PhaseStatus
 }
 
+export interface RiskMatrixItem {
+  id: string
+  descricao: string
+  probabilidade: 'baixa' | 'media' | 'alta'
+  gravidade: 'baixa' | 'media' | 'alta'
+  nivel: 'baixo' | 'medio' | 'alto' | 'extremo'
+  mitigacao: string
+}
+
 export interface PPCOTState {
   operationName: string; fase01: MissionAnalysis; fase02: SituacaoAnalysis
   fase03: LinhasAcaoData; fase04: ComparacaoData; fase05: DecisaoData
-  fase06: OrdemOperacoes; currentPhase: number
+  fase06: OrdemOperacoes; riscos: RiskMatrixItem[]; currentPhase: number
 }
+
