@@ -9,6 +9,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Nenhum arquivo enviado.' }, { status: 400 })
     }
 
+    // Limite de segurança contra DoS / Exaustão de Memória (25MB)
+    if (file.size > 25 * 1024 * 1024) {
+      return NextResponse.json(
+        { success: false, error: 'Arquivo excede o limite máximo permitido de 25 MB.' },
+        { status: 413 }
+      )
+    }
+
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     let text = ''
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Document parsing error:', error)
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro interno ao processar o arquivo.' },
+      { success: false, error: 'Falha ao processar o arquivo anexado. Verifique a integridade do documento.' },
       { status: 500 }
     )
   }

@@ -343,13 +343,16 @@ Responda em JSON com esta estrutura exata:
 }`
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+    const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
+      signal: AbortSignal.timeout(45000),
       body: JSON.stringify({
         contents: [
           {

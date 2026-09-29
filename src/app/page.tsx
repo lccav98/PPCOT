@@ -10,7 +10,7 @@ import Fase05 from '@/components/phases/Fase05'
 import Fase06 from '@/components/phases/Fase06'
 import BriefingSlides from '@/components/shared/BriefingSlides'
 import RiskManager from '@/components/shared/RiskManager'
-import { CheckCircle, Circle, Clock, Play, ShieldAlert, X } from 'lucide-react'
+import { CheckCircle, Circle, Clock, Play, ShieldAlert, X, Menu } from 'lucide-react'
 
 const phaseKeys = ['fase01','fase02','fase03','fase04','fase05','fase06'] as const
 
@@ -18,25 +18,33 @@ export default function Home() {
   const { state, dispatch } = usePPCOT()
   const [showBriefings, setShowBriefings] = useState(false)
   const [showRisks, setShowRisks] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const completedCount = phaseKeys.filter(k => state[k].status === 'completed').length
   const progress = Math.round((completedCount / 6) * 100)
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar mobileOpen={mobileSidebarOpen} onCloseMobile={() => setMobileSidebarOpen(false)} />
 
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-screen overflow-hidden w-full">
         {/* Header */}
-        <header className="bg-card-bg border-b border-military-green px-6 py-3 flex items-center justify-between no-print flex-shrink-0">
-          <div className="flex items-center gap-4">
+        <header className="bg-card-bg border-b border-military-green px-4 sm:px-6 py-3 flex items-center justify-between no-print flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden text-military-gold hover:text-white p-1"
+              aria-label="Abrir menu"
+            >
+              <Menu size={20} />
+            </button>
             <input
-              className="bg-transparent text-white font-bold text-sm border-b border-transparent hover:border-military-gold focus:border-military-gold focus:outline-none transition-colors pb-0.5 w-64"
+              className="bg-transparent text-white font-bold text-sm border-b border-transparent hover:border-military-gold focus:border-military-gold focus:outline-none transition-colors pb-0.5 w-44 sm:w-64 truncate"
               value={state.operationName}
               onChange={e => dispatch({ type: 'SET_OPERATION_NAME', payload: e.target.value })}
             />
-            <span className="text-green-600 text-xs">|</span>
-            <span className="text-green-500 text-xs">Exame de Situação do Comandante</span>
+            <span className="hidden sm:inline text-green-600 text-xs">|</span>
+            <span className="hidden sm:inline text-green-500 text-xs">Exame de Situação do Comandante</span>
           </div>
 
           <div className="flex items-center gap-3">

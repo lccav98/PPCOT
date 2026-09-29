@@ -1,6 +1,6 @@
 'use client'
 import { usePPCOT } from '@/lib/store'
-import { CheckCircle, Circle, Clock, ChevronRight, Shield, LayoutDashboard } from 'lucide-react'
+import { CheckCircle, Circle, Clock, ChevronRight, Shield, LayoutDashboard, X } from 'lucide-react'
 
 const phases = [
   { num: 1, label: 'Análise da Missão', sub: 'Fase 01' },
@@ -13,26 +13,53 @@ const phases = [
 
 const phaseKeys = ['fase01', 'fase02', 'fase03', 'fase04', 'fase05', 'fase06'] as const
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean
+  onCloseMobile?: () => void
+}
+
+export default function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const { state, dispatch } = usePPCOT()
 
   return (
-    <aside className="w-64 min-h-screen bg-card-bg border-r border-military-green flex flex-col no-print">
-      {/* Logo */}
-      <div className="p-4 border-b border-military-green">
-        <div className="flex items-center gap-2 mb-1">
-          <Shield className="text-military-gold animate-pulse-gold" size={20} />
-          <span className="text-military-gold font-bold text-sm tracking-widest font-title">PPCOT</span>
+    <>
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/75 z-40 md:hidden backdrop-blur-xs transition-opacity duration-200"
+        />
+      )}
+      <aside className={`w-64 min-h-screen bg-card-bg border-r border-military-green flex flex-col no-print z-50 fixed md:static transition-transform duration-200 ease-in-out ${
+        mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+      }`}>
+        {/* Logo */}
+        <div className="p-4 border-b border-military-green flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Shield className="text-military-gold animate-pulse-gold" size={20} />
+              <span className="text-military-gold font-bold text-sm tracking-widest font-title">PPCOT</span>
+            </div>
+            <p className="text-green-600 text-xs">Plataforma de Planejamento</p>
+            <p className="text-green-400 text-xs font-medium mt-1 truncate max-w-[170px]">{state.operationName}</p>
+          </div>
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="md:hidden text-green-500 hover:text-white p-1"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
-        <p className="text-green-600 text-xs">Plataforma de Planejamento</p>
-        <p className="text-green-400 text-xs font-medium mt-1 truncate">{state.operationName}</p>
-      </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
         {/* Painel Principal Link */}
         <button
-          onClick={() => dispatch({ type: 'SET_PHASE', payload: 0 })}
+          onClick={() => {
+            dispatch({ type: 'SET_PHASE', payload: 0 })
+            onCloseMobile?.()
+          }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer ${
             state.currentPhase === 0
               ? 'bg-military-green border border-military-gold text-white font-bold'
@@ -59,7 +86,10 @@ export default function Sidebar() {
           return (
             <button
               key={phase.num}
-              onClick={() => dispatch({ type: 'SET_PHASE', payload: phase.num })}
+              onClick={() => {
+                dispatch({ type: 'SET_PHASE', payload: phase.num })
+                onCloseMobile?.()
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer ${
                 isActive
                   ? 'bg-military-green border border-military-gold text-white font-bold'
