@@ -85,22 +85,58 @@ export interface LinhasAcaoData {
 
 export interface CriterioAvaliacao { id: string; nome: string; peso: number }
 
+export interface PontuacaoItem {
+  laId: string
+  criterioId: string
+  pontos: number
+  rawScore?: number
+  confidence?: number
+  probabilities?: Record<string, number>
+  justificativa?: string
+}
+
+export interface APAResultItem {
+  adequabilidade: boolean
+  praticabilidade: boolean
+  aceitabilidade: boolean
+  confidence?: {
+    adequabilidade?: number
+    praticabilidade?: number
+    aceitabilidade?: number
+  }
+  probabilities?: {
+    adequabilidade?: number
+    praticabilidade?: number
+    aceitabilidade?: number
+  }
+}
+
 export interface UnitComparacaoAnalysis {
   criterios: CriterioAvaliacao[]
-  pontuacoes: { laId: string; criterioId: string; pontos: number }[]
+  pontuacoes: PontuacaoItem[]
   justificativas?: Record<string, string>
-  apaFinalLA: Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }>
+  apaFinalLA: Record<string, APAResultItem>
   laRecomendada: string
   justificativa: string
+  decisionEngine?: {
+    model?: string
+    confidenceAvg?: number
+  }
 }
 
 export interface ComparacaoData {
   criterios: CriterioAvaliacao[]
-  pontuacoes: { laId: string; criterioId: string; pontos: number }[]
+  pontuacoes: PontuacaoItem[]
   justificativas?: Record<string, string>
-  apaFinalLA: Record<string, { adequabilidade: boolean; praticabilidade: boolean; aceitabilidade: boolean }>
-  laRecomendada: string; justificativa: string; status: PhaseStatus
+  apaFinalLA: Record<string, APAResultItem>
+  laRecomendada: string
+  justificativa: string
+  status: PhaseStatus
   unitAnalyses?: Record<string, UnitComparacaoAnalysis>
+  decisionEngine?: {
+    model?: string
+    confidenceAvg?: number
+  }
 }
 
 export interface UnitDecisaoAnalysis {

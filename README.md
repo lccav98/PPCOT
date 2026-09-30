@@ -5,18 +5,20 @@
 
 ## Sobre
 
-Plataforma web que automatiza as **6 fases do Exame de Situação** do Componente Detalhado do Planejamento (§4.3 PPCOT), integrando Inteligência Artificial (Claude API) para análise de missão, geração de Linhas de Ação e redação de Ordens de Operações.
+Plataforma web militar que automatiza as **6 fases do Exame de Situação** do Componente Detalhado do Planejamento (§4.3 PPCOT). O sistema adota uma arquitetura de IA especializada de duplo motor:
+- **Motor de Tomada de Decisão: JEV (TypeSafe System One)** — Julgamentos tipados, composite scoring calibrado, prova de APA (Adequabilidade, Praticabilidade, Aceitabilidade) com probabilidades probabilísticas e intervalos de confiança para apoio à decisão do Comandante.
+- **Motor de Redação de Ordens: Gemini API** — Extração e redação estruturada de documentos operacionais (DIPLAN, OA-1, OA-4, OROP e Estimativas S2-S5).
 
 ## Fases Implementadas
 
-| Fase | Processo | Automação |
-|------|----------|-----------|
-| 01 | Análise da Missão | IA extrai 5W, tarefas impostas/deduzidas, EEI, enunciado |
-| 02 | Situação e Compreensão | MITeMeTeC, DICOVAP, OCOAV, AECOPE, FFF automático |
-| 03 | Linhas de Ação | IA gera L Aç, APA preliminar automática, Psb Ini |
-| 04 | Comparação das LA | Matriz de Decisão ponderada, ranking automático |
-| 05 | Decisão | DIPLAN automática, importação de EEI |
-| 06 | Ordem de Operações | Redação automática, impressão direta |
+| Fase | Processo | Automação e IA |
+|------|----------|----------------|
+| 01 | Análise da Missão | IA extrai 5W, tarefas impostas/deduzidas, restrições, EEI e novo enunciado |
+| 02 | Situação e Compreensão | DICOVAP, OCOAV, FFF automático e estimativas de Estado-Maior |
+| 03 | Linhas de Ação | Formulação de manobras táticas por escalão e sincronização |
+| 04 | Comparação das LA | **Motor JEV (System One)**: Matriz de Decisão ponderada (Score), Prova de APA (Noul), Distribuição de Probabilidades e Recomendação (Choice) |
+| 05 | Decisão | Decisão do Comandante fundamentada no JEV, DIPLAN atualizada e emissão de OA-4 |
+| 06 | Ordem de Operações | Redação completa da OROP com tarefas aos escalões subordinados |
 
 ## Instalação
 
@@ -30,7 +32,7 @@ npm install
 
 # 3. Configurar variáveis de ambiente
 cp .env.example .env.local
-# Edite .env.local e adicione sua ANTHROPIC_API_KEY
+# Edite .env.local e adicione TYPESAFE_API_KEY e GEMINI_API_KEY
 
 # 4. Iniciar o servidor
 npm run dev
@@ -38,23 +40,37 @@ npm run dev
 
 Acesse: [http://localhost:3000](http://localhost:3000)
 
-## Configuração da IA
+## Configuração dos Motores de IA
 
-A plataforma usa o modelo Claude para análise de ordens e geração de documentos. Para ativar:
+### 1. Motor de Tomada de Decisão (JEV / TypeSafe AI)
+Utilizado na **Fase 04 (Matriz de Decisão, Prova de APA e Recomendação de L Aç)**:
+1. Obtenha sua chave em [console.typesafe.ai](https://console.typesafe.ai/)
+2. No arquivo `.env.local`, defina:
+   ```env
+   TYPESAFE_API_KEY=ts_sua_chave_aqui
+   TYPESAFE_MODEL=jev-latest
+   ```
+> Modelos generativos tradicionais (LLMs) são inadequados para matrizes de decisão quantitativas devido a alucinações e ausência de calibração estatística. O JEV atua como modelo *System One*, gerando julgamentos tipados e probabilidades calibradas consumidas diretamente pelo código.
 
-1. Acesse [console.anthropic.com](https://console.anthropic.com)
-2. Crie uma API Key
-3. Adicione ao arquivo `.env.local`: `ANTHROPIC_API_KEY=sk-ant-...`
+### 2. Motor de Redação Operacional (Gemini API)
+Utilizado para redação de ordens de operações, ordens de alerta e estimativas de EM:
+1. Obtenha sua chave no [Google AI Studio](https://aistudio.google.com/)
+2. No arquivo `.env.local`, defina:
+   ```env
+   GEMINI_API_KEY=AIzaSy...
+   GEMINI_MODEL=gemini-2.0-flash
+   ```
 
-> As features de formulário funcionam sem API Key. A IA é opcional.
+> As funcionalidades de formulário e persistência local operam normalmente mesmo sem API Keys configuradas.
 
 ## Stack Tecnológica
 
-- **Next.js 14** (App Router)
+- **Next.js 16** (App Router & Turbopack)
 - **TypeScript**
-- **Tailwind CSS** (tema militar verde/dourado)
-- **Anthropic Claude API** (análise e geração de documentos)
-- **React Context + localStorage** (persistência local)
+- **Tailwind CSS v4** (tema militar tático verde/dourado)
+- **@typesafe-ai/sdk** (Motor de Decisão JEV — System One)
+- **Google Generative AI / Gemini** (Redação e extração textual)
+- **React Context + localStorage** (persistência e isolamento por escalão)
 
 ## Referência Doutrinária
 
@@ -65,4 +81,4 @@ A plataforma usa o modelo Claude para análise de ordens e geração de document
 
 ---
 
-*Desenvolvido para suporte ao planejamento operacional da Força Terrestre.*
+*Desenvolvido para apoio à decisão e suporte ao planejamento operacional da Força Terrestre.*

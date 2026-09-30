@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { evaluateDecisionWithJev } from '@/lib/jevDecisionEngine'
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ success: false, error: 'GEMINI_API_KEY não configurada em .env.local' }, { status: 500 })
-  }
-
   try {
     const { type, content, targetUnit } = await req.json()
+
+    // 1. Motor de Tomada de Decisão: JEV (TypeSafe System One)
+    if (type === 'compare' || type === 'decision') {
+      const jevResult = await evaluateDecisionWithJev({
+        targetUnit,
+        linhasAcao: content.linhasAcao,
+        criterios: content.criterios,
+        context: content.context || {
+          mission: content.mission,
+          intent: content.intent,
+          dicovap: content.dicovap,
+          ocoav: content.ocoav,
+          means: content.means,
+          subordinateEchelons: content.subordinateEchelons
+        }
+      })
+      return NextResponse.json({ success: true, data: jevResult })
+    }
+
+    // 2. Geração e Redação de Texto: Gemini API
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY não configurada em .env.local' }, { status: 500 })
+    }
 
     let systemPrompt = ''
     let userMessage = ''
@@ -313,33 +333,6 @@ Responda em JSON com esta estrutura exata:
   "organizacoes": "Considerações civis: Organizações (ONGs, grupos de influência, igrejas)",
   "pessoas": "Considerações civis: Pessoas de influência ou deslocados/refugiados",
   "eventos": "Considerações civis: Eventos marcantes (eleições, colheitas, mercados semanais)"
-}`
-    } else if (type === 'compare') {
-      systemPrompt = `Você é um planejador militar sênior especializado em avaliação e comparação de Linhas de Ação (L Aç) conforme o PPCOT.
-Analise cada Linha de Ação contra a lista de critérios fornecidos de forma crítica e objetiva.
-Responda APENAS em JSON válido, sem markdown, sem texto adicional.`
-      userMessage = `Compare as seguintes Linhas de Ação (L Aç) em relação a cada um dos critérios de avaliação fornecidos.
-
-LINHAS DE AÇÃO:
-${JSON.stringify(content.linhasAcao)}
-
-CRITÉRIOS DE AVALIAÇÃO:
-${JSON.stringify(content.criterios)}
-
-Para cada cruzamento de Linha de Ação e Critério de Avaliação:
-1. Atribua uma pontuação objetiva de 0 (pior) a 5 (melhor), comparando as L Aç de maneira contrastante e taticamente fundamentada.
-2. Escreva uma justificativa tática curta e extremamente objetiva (máximo de 2 frases) explicando a razão da nota com base na manobra, meios, terreno ou doutrina militar.
-
-Responda em JSON com esta estrutura exata:
-{
-  "pontuacoes": [
-    {
-      "laId": "id_da_linha_de_acao",
-      "criterioId": "id_do_criterio",
-      "pontos": 4,
-      "justificativa": "Justificativa tática e objetiva da nota..."
-    }
-  ]
 }`
     }
 

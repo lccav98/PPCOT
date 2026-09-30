@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { usePPCOT } from '@/lib/store'
-import { CheckCircle, Plus, Trash2, Brain, Loader, Printer } from 'lucide-react'
+import { CheckCircle, Plus, Trash2, Brain, Loader, Printer, Shield } from 'lucide-react'
 
 export default function Fase05() {
   const { state, dispatch } = usePPCOT()
@@ -166,9 +166,11 @@ export default function Fase05() {
       {/* Recomendação do EM */}
       {laRec && (
         <div className="bg-military-green/20 border border-military-gold rounded-lg p-4">
-          <p className="text-military-gold text-xs font-bold uppercase tracking-wider mb-1">Recomendação do EM</p>
-          <p className="text-white text-sm">L Aç {las.find(la => la.id === laRec)?.numero} — {las.find(la => la.id === laRec)?.sumario?.substring(0, 100) || ''}</p>
-          <p className="text-green-400 text-xs mt-1">{state.fase04.justificativa?.substring(0, 150)}</p>
+          <p className="text-military-gold text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <Shield size={14} /> Recomendação do Estado-Maior (Motor JEV System One)
+          </p>
+          <p className="text-white text-sm font-semibold">L Aç {las.find(la => la.id === laRec)?.numero} — {las.find(la => la.id === laRec)?.sumario?.substring(0, 100) || ''}</p>
+          <p className="text-green-400 text-xs mt-1">{state.fase04.justificativa || state.fase04.unitAnalyses?.[selectedUnit]?.justificativa}</p>
         </div>
       )}
 

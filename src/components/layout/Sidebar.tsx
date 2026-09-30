@@ -131,5 +131,6 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarPr
         </button>
       </div>
     </aside>
+    </>
   )
 }
