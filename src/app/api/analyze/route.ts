@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateDecisionWithJev } from '@/lib/jevDecisionEngine'
+import {
+  parseMilitaryMissionOrder,
+  parseMilitarySituationIntelligence,
+  generateMilitaryLinesOfActionDoctrine,
+  generateOA1Doctrine,
+  generateEstimativasDoctrine,
+  generateSyncGridDoctrine,
+  generateOA4Doctrine,
+  generateOROPDoctrine
+} from '@/lib/militaryParser'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,10 +33,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, data: jevResult })
     }
 
-    // 2. Geração e Redação de Texto: Gemini API
+    // 2. Extração e Redação com IA / Doutrina Militar
     const apiKey = process.env.GEMINI_API_KEY
+
+    // Se GEMINI_API_KEY não estiver configurada, executa o motor militar estruturado sem travar o usuário
     if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY não configurada em .env.local' }, { status: 500 })
+      if (type === 'mission') {
+        return NextResponse.json({ success: true, data: parseMilitaryMissionOrder(content, targetUnit) })
+      }
+      if (type === 'situation') {
+        return NextResponse.json({ success: true, data: parseMilitarySituationIntelligence(content) })
+      }
+      if (type === 'la') {
+        return NextResponse.json({ success: true, data: generateMilitaryLinesOfActionDoctrine(content, targetUnit) })
+      }
+      if (type === 'oa1') {
+        return NextResponse.json({ success: true, data: { oa1: generateOA1Doctrine(content) } })
+      }
+      if (type === 'estimativas') {
+        return NextResponse.json({ success: true, data: generateEstimativasDoctrine(content) })
+      }
+      if (type === 'sync') {
+        return NextResponse.json({ success: true, data: { syncGrid: generateSyncGridDoctrine(content, targetUnit) } })
+      }
+      if (type === 'oa4') {
+        return NextResponse.json({ success: true, data: { oa4: generateOA4Doctrine(content, targetUnit) } })
+      }
+      if (type === 'orop') {
+        return NextResponse.json({ success: true, data: generateOROPDoctrine(content) })
+      }
+      return NextResponse.json({ success: false, error: 'Operação não suportada sem GEMINI_API_KEY.' }, { status: 400 })
     }
 
     let systemPrompt = ''
